@@ -1,6 +1,6 @@
 # Sandbox NETCONF con Docker Compose
 
-Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip`, un modelo `sandbox-device`, estado operacional dinámico, RPCs y un cliente Python con `ncclient`.
+Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip`, un modelo `sandbox-device`, estado operacional dinámico y RPCs.
 
 ## Qué simula
 
@@ -61,7 +61,7 @@ echo '<ping xmlns="urn:sandbox:device"><destination>127.0.0.1</destination><coun
 docker compose exec device sysrepocfg -X -d operational -m sandbox-device -f xml
 ```
 
-`scripts/smoke-test.sh` (ejecutado por `make test`) automatiza estos mismos pasos.
+`scripts/smoke-test.sh` automatiza estos mismos pasos.
 
 ## Cliente interactivo
 
@@ -142,7 +142,7 @@ docker compose up --build -d
 ## Prueba automática
 
 ```bash
-make test
+./scripts/smoke-test.sh
 ```
 
 La prueba levanta el laboratorio y verifica lectura, edición, estado de interfaz y RPC.
@@ -159,36 +159,9 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   ├── init/interfaces.xml
 │   ├── init/system.xml
 │   └── yang/sandbox-device.yang
-├── scripts/smoke-test.sh
-└── Makefile
+└── scripts/smoke-test.sh
 ```
-
-> Existe también un directorio `client/` con ejemplos en Python (`ncclient`),
-> pero de momento no está integrado en `compose.yaml` ni cubierto por el smoke
-> test: el foco actual del proyecto es el `device`.
 
 ## Base técnica
 
 Netopeer2 implementa el servidor NETCONF sobre libyang/libnetconf2 y usa Sysrepo como datastore. El proyecto fija la imagen `sysrepo/netopeer2` por digest para evitar que una reconstrucción cambie silenciosamente; puedes sustituirla mediante `NETOPEER2_IMAGE`.
-
-## Desarrollo
-
-El plugin del device (`device/app/device_plugin.py`) se lintea y formatea con [ruff](https://docs.astral.sh/ruff/) vía [uv](https://docs.astral.sh/uv/):
-
-```bash
-make lint
-# equivalente a:
-uv run ruff check .
-uv run ruff format --check .
-```
-
-## CI
-
-GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
-
-- `lint`: `ruff check` + `ruff format --check`.
-- `smoke-test`: construye el `device`, lo levanta y corre `scripts/smoke-test.sh`.
-
-## Licencia
-
-[MIT](LICENSE).
