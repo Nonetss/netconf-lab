@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=./interfaces.schema.json
+"ietf-interfaces:interfaces":
+  interface:
+    - name: eth0 # string
+      description: "Ethernet interface" # string
+      type: "iana-if-type:ethernetCsmacd" # identityref base interface-type, mandatory
+      enabled: true # boolean
+      link-up-down-trap-enable: "enabled" # enumeration, if-feature if-mib, enum: enabled|disabled
+      "ietf-ip:ipv4":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint16
+        address:
+          - ip: 10.1.1.10 # inet:ipv4-address-no-zone
+            prefix-length: 24 # uint8
+            netmask: 255.255.255.0 # yang:dotted-quad, if-feature ipv4-non-contiguous-netmasks
+        neighbor:
+          - ip: 10.1.1.1 # inet:ipv4-address-no-zone
+            link-layer-address: 00:11:22:33:44:55 # yang:phys-address, mandatory

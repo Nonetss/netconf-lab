@@ -1,0 +1,489 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ietf-interfaces config seed",
+  "type": "object",
+  "properties": {
+    "ietf-interfaces:interfaces": {
+      "type": "object",
+      "properties": {
+        "interface": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "iana-if-type:a12MppSwitch",
+                  "iana-if-type:aal2",
+                  "iana-if-type:aal5",
+                  "iana-if-type:actelisMetaLOOP",
+                  "iana-if-type:adsl",
+                  "iana-if-type:adsl2",
+                  "iana-if-type:adsl2plus",
+                  "iana-if-type:aflane8023",
+                  "iana-if-type:aflane8025",
+                  "iana-if-type:aluELP",
+                  "iana-if-type:aluEpon",
+                  "iana-if-type:aluEponLogicalLink",
+                  "iana-if-type:aluEponOnu",
+                  "iana-if-type:aluEponPhysicalUni",
+                  "iana-if-type:aluGponOnu",
+                  "iana-if-type:aluGponPhysicalUni",
+                  "iana-if-type:arap",
+                  "iana-if-type:arcnet",
+                  "iana-if-type:arcnetPlus",
+                  "iana-if-type:async",
+                  "iana-if-type:atm",
+                  "iana-if-type:atmDxi",
+                  "iana-if-type:atmFuni",
+                  "iana-if-type:atmIma",
+                  "iana-if-type:atmLogical",
+                  "iana-if-type:atmRadio",
+                  "iana-if-type:atmSubInterface",
+                  "iana-if-type:atmVciEndPt",
+                  "iana-if-type:atmVirtual",
+                  "iana-if-type:atmbond",
+                  "iana-if-type:aviciOpticalEther",
+                  "iana-if-type:ax25",
+                  "iana-if-type:basicISDN",
+                  "iana-if-type:bgppolicyaccounting",
+                  "iana-if-type:bits",
+                  "iana-if-type:bridge",
+                  "iana-if-type:bsc",
+                  "iana-if-type:cableDownstreamRfPort",
+                  "iana-if-type:capwapDot11Bss",
+                  "iana-if-type:capwapDot11Profile",
+                  "iana-if-type:capwapWtpVirtualRadio",
+                  "iana-if-type:cblVectaStar",
+                  "iana-if-type:cctEmul",
+                  "iana-if-type:ces",
+                  "iana-if-type:channel",
+                  "iana-if-type:ciscoISLvlan",
+                  "iana-if-type:cnr",
+                  "iana-if-type:coffee",
+                  "iana-if-type:compositeLink",
+                  "iana-if-type:cpri",
+                  "iana-if-type:dcn",
+                  "iana-if-type:ddnX25",
+                  "iana-if-type:digitalPowerline",
+                  "iana-if-type:digitalWrapperOverheadChannel",
+                  "iana-if-type:dlsw",
+                  "iana-if-type:docsCableDownstream",
+                  "iana-if-type:docsCableMCmtsDownstream",
+                  "iana-if-type:docsCableMaclayer",
+                  "iana-if-type:docsCableNdf",
+                  "iana-if-type:docsCableNdr",
+                  "iana-if-type:docsCableScte55d1FwdOob",
+                  "iana-if-type:docsCableScte55d1RetOob",
+                  "iana-if-type:docsCableScte55d2DsOob",
+                  "iana-if-type:docsCableScte55d2UsOob",
+                  "iana-if-type:docsCableUpstream",
+                  "iana-if-type:docsCableUpstreamChannel",
+                  "iana-if-type:docsCableUpstreamRfPort",
+                  "iana-if-type:docsOfdmDownstream",
+                  "iana-if-type:docsOfdmaUpstream",
+                  "iana-if-type:ds0",
+                  "iana-if-type:ds0Bundle",
+                  "iana-if-type:ds1",
+                  "iana-if-type:ds1FDL",
+                  "iana-if-type:ds3",
+                  "iana-if-type:dtm",
+                  "iana-if-type:dvbAsiIn",
+                  "iana-if-type:dvbAsiOut",
+                  "iana-if-type:dvbRccDownstream",
+                  "iana-if-type:dvbRccMacLayer",
+                  "iana-if-type:dvbRccUpstream",
+                  "iana-if-type:dvbRcsMacLayer",
+                  "iana-if-type:dvbRcsTdma",
+                  "iana-if-type:dvbTdm",
+                  "iana-if-type:e1",
+                  "iana-if-type:econet",
+                  "iana-if-type:eon",
+                  "iana-if-type:eplrs",
+                  "iana-if-type:escon",
+                  "iana-if-type:ethernet3Mbit",
+                  "iana-if-type:ethernetCsmacd",
+                  "iana-if-type:fast",
+                  "iana-if-type:fastEther",
+                  "iana-if-type:fastEtherFX",
+                  "iana-if-type:fastdsl",
+                  "iana-if-type:fcipLink",
+                  "iana-if-type:fddi",
+                  "iana-if-type:fibreChannel",
+                  "iana-if-type:frDlciEndPt",
+                  "iana-if-type:frForward",
+                  "iana-if-type:frameRelay",
+                  "iana-if-type:frameRelayInterconnect",
+                  "iana-if-type:frameRelayMPI",
+                  "iana-if-type:frameRelayService",
+                  "iana-if-type:frf16MfrBundle",
+                  "iana-if-type:g703at2mb",
+                  "iana-if-type:g703at64k",
+                  "iana-if-type:g9981",
+                  "iana-if-type:g9982",
+                  "iana-if-type:g9983",
+                  "iana-if-type:gfast",
+                  "iana-if-type:gfp",
+                  "iana-if-type:ghn",
+                  "iana-if-type:gigabitEthernet",
+                  "iana-if-type:gpon",
+                  "iana-if-type:gr303IDT",
+                  "iana-if-type:gr303RDT",
+                  "iana-if-type:gtp",
+                  "iana-if-type:h323Gatekeeper",
+                  "iana-if-type:h323Proxy",
+                  "iana-if-type:hdh1822",
+                  "iana-if-type:hdlc",
+                  "iana-if-type:hdsl2",
+                  "iana-if-type:hiperlan2",
+                  "iana-if-type:hippi",
+                  "iana-if-type:hippiInterface",
+                  "iana-if-type:homepna",
+                  "iana-if-type:hostPad",
+                  "iana-if-type:hssi",
+                  "iana-if-type:hyperchannel",
+                  "iana-if-type:iana-interface-type",
+                  "iana-if-type:ibm370parChan",
+                  "iana-if-type:idsl",
+                  "iana-if-type:ieee1394",
+                  "iana-if-type:ieee19061nanocom",
+                  "iana-if-type:ieee80211",
+                  "iana-if-type:ieee80212",
+                  "iana-if-type:ieee802154",
+                  "iana-if-type:ieee80216WMAN",
+                  "iana-if-type:ieee8021axDrni",
+                  "iana-if-type:ieee8023adLag",
+                  "iana-if-type:if-gsn",
+                  "iana-if-type:ifPwType",
+                  "iana-if-type:ifVfiType",
+                  "iana-if-type:ilan",
+                  "iana-if-type:imt",
+                  "iana-if-type:infiniband",
+                  "iana-if-type:interleave",
+                  "iana-if-type:ip",
+                  "iana-if-type:ipForward",
+                  "iana-if-type:ipOverAtm",
+                  "iana-if-type:ipOverCdlc",
+                  "iana-if-type:ipOverClaw",
+                  "iana-if-type:ipSwitch",
+                  "iana-if-type:isdn",
+                  "iana-if-type:isdns",
+                  "iana-if-type:isdnu",
+                  "iana-if-type:iso88022llc",
+                  "iana-if-type:iso88023Csmacd",
+                  "iana-if-type:iso88024TokenBus",
+                  "iana-if-type:iso88025CRFPInt",
+                  "iana-if-type:iso88025Dtr",
+                  "iana-if-type:iso88025Fiber",
+                  "iana-if-type:iso88025TokenRing",
+                  "iana-if-type:iso88026Man",
+                  "iana-if-type:isup",
+                  "iana-if-type:l2vlan",
+                  "iana-if-type:l3ipvlan",
+                  "iana-if-type:l3ipxvlan",
+                  "iana-if-type:lapb",
+                  "iana-if-type:lapd",
+                  "iana-if-type:lapf",
+                  "iana-if-type:linegroup",
+                  "iana-if-type:lmp",
+                  "iana-if-type:localTalk",
+                  "iana-if-type:macSecControlledIF",
+                  "iana-if-type:macSecUncontrolledIF",
+                  "iana-if-type:mediaMailOverIp",
+                  "iana-if-type:mfSigLink",
+                  "iana-if-type:microwaveCarrierTermination",
+                  "iana-if-type:microwaveRadioLinkTerminal",
+                  "iana-if-type:miox25",
+                  "iana-if-type:mocaVersion1",
+                  "iana-if-type:modem",
+                  "iana-if-type:mpc",
+                  "iana-if-type:mpegTransport",
+                  "iana-if-type:mpls",
+                  "iana-if-type:mplsTunnel",
+                  "iana-if-type:msdsl",
+                  "iana-if-type:mvl",
+                  "iana-if-type:myrinet",
+                  "iana-if-type:nfas",
+                  "iana-if-type:nsip",
+                  "iana-if-type:omni",
+                  "iana-if-type:opticalChannel",
+                  "iana-if-type:opticalChannelGroup",
+                  "iana-if-type:opticalTransport",
+                  "iana-if-type:other",
+                  "iana-if-type:otnOdu",
+                  "iana-if-type:otnOduc",
+                  "iana-if-type:otnOtsi",
+                  "iana-if-type:otnOtsig",
+                  "iana-if-type:otnOtu",
+                  "iana-if-type:otnOtuc",
+                  "iana-if-type:p2pOverLan",
+                  "iana-if-type:para",
+                  "iana-if-type:pdnEtherLoop1",
+                  "iana-if-type:pdnEtherLoop2",
+                  "iana-if-type:pip",
+                  "iana-if-type:plc",
+                  "iana-if-type:pon155",
+                  "iana-if-type:pon622",
+                  "iana-if-type:pos",
+                  "iana-if-type:ppp",
+                  "iana-if-type:pppMultilinkBundle",
+                  "iana-if-type:primaryISDN",
+                  "iana-if-type:propAtm",
+                  "iana-if-type:propBWAp2Mp",
+                  "iana-if-type:propCnls",
+                  "iana-if-type:propDocsWirelessDownstream",
+                  "iana-if-type:propDocsWirelessMaclayer",
+                  "iana-if-type:propDocsWirelessUpstream",
+                  "iana-if-type:propMultiplexor",
+                  "iana-if-type:propPointToPointSerial",
+                  "iana-if-type:propVirtual",
+                  "iana-if-type:propWirelessP2P",
+                  "iana-if-type:proteon10Mbit",
+                  "iana-if-type:proteon80Mbit",
+                  "iana-if-type:ptm",
+                  "iana-if-type:q2931",
+                  "iana-if-type:qam",
+                  "iana-if-type:qllc",
+                  "iana-if-type:radioMAC",
+                  "iana-if-type:radsl",
+                  "iana-if-type:reachDSL",
+                  "iana-if-type:regular1822",
+                  "iana-if-type:rfc1483",
+                  "iana-if-type:rfc877x25",
+                  "iana-if-type:roe",
+                  "iana-if-type:rpr",
+                  "iana-if-type:rs232",
+                  "iana-if-type:rsrb",
+                  "iana-if-type:sdci",
+                  "iana-if-type:sdlc",
+                  "iana-if-type:sdsl",
+                  "iana-if-type:shdsl",
+                  "iana-if-type:sip",
+                  "iana-if-type:sipSig",
+                  "iana-if-type:sipTg",
+                  "iana-if-type:sixToFour",
+                  "iana-if-type:slip",
+                  "iana-if-type:smdsDxi",
+                  "iana-if-type:smdsIcip",
+                  "iana-if-type:softwareLoopback",
+                  "iana-if-type:sonet",
+                  "iana-if-type:sonetOverheadChannel",
+                  "iana-if-type:sonetPath",
+                  "iana-if-type:sonetVT",
+                  "iana-if-type:srp",
+                  "iana-if-type:ss7SigLink",
+                  "iana-if-type:stackToStack",
+                  "iana-if-type:starLan",
+                  "iana-if-type:tdlc",
+                  "iana-if-type:teLink",
+                  "iana-if-type:termPad",
+                  "iana-if-type:tr008",
+                  "iana-if-type:transpHdlc",
+                  "iana-if-type:tunnel",
+                  "iana-if-type:ultra",
+                  "iana-if-type:usb",
+                  "iana-if-type:v11",
+                  "iana-if-type:v35",
+                  "iana-if-type:v36",
+                  "iana-if-type:v37",
+                  "iana-if-type:vdsl",
+                  "iana-if-type:vdsl2",
+                  "iana-if-type:virtualIpAddress",
+                  "iana-if-type:virtualTg",
+                  "iana-if-type:vmwareNicTeam",
+                  "iana-if-type:vmwareVirtualNic",
+                  "iana-if-type:voiceDID",
+                  "iana-if-type:voiceEBS",
+                  "iana-if-type:voiceEM",
+                  "iana-if-type:voiceEMFGD",
+                  "iana-if-type:voiceEncap",
+                  "iana-if-type:voiceFGDEANA",
+                  "iana-if-type:voiceFGDOS",
+                  "iana-if-type:voiceFXO",
+                  "iana-if-type:voiceFXS",
+                  "iana-if-type:voiceOverAtm",
+                  "iana-if-type:voiceOverCable",
+                  "iana-if-type:voiceOverFrameRelay",
+                  "iana-if-type:voiceOverIp",
+                  "iana-if-type:wwanPP",
+                  "iana-if-type:wwanPP2",
+                  "iana-if-type:x213",
+                  "iana-if-type:x25huntGroup",
+                  "iana-if-type:x25mlp",
+                  "iana-if-type:x25ple",
+                  "iana-if-type:x86Laps",
+                  "iana-if-type:xboxWireless"
+                ],
+                "description": "mandatory"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "link-up-down-trap-enable": {
+                "type": "string",
+                "enum": [
+                  "enabled",
+                  "disabled"
+                ],
+                "description": "requires feature 'if-mib'"
+              },
+              "ietf-ip:ipv4": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "forwarding": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "mtu": {
+                    "type": "integer"
+                  },
+                  "address": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string"
+                        },
+                        "prefix-length": {
+                          "type": "integer"
+                        },
+                        "netmask": {
+                          "type": "string",
+                          "description": "requires feature 'ipv4-non-contiguous-netmasks'"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "neighbor": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string"
+                        },
+                        "link-layer-address": {
+                          "type": "string",
+                          "description": "mandatory"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "link-layer-address"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "ietf-ip:ipv6": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "forwarding": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "mtu": {
+                    "type": "integer"
+                  },
+                  "address": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string"
+                        },
+                        "prefix-length": {
+                          "type": "integer",
+                          "description": "mandatory"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "prefix-length"
+                      ]
+                    }
+                  },
+                  "neighbor": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string"
+                        },
+                        "link-layer-address": {
+                          "type": "string",
+                          "description": "mandatory"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "link-layer-address"
+                      ]
+                    }
+                  },
+                  "dup-addr-detect-transmits": {
+                    "type": "integer",
+                    "default": 1
+                  },
+                  "autoconf": {
+                    "type": "object",
+                    "properties": {
+                      "create-global-addresses": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "create-temporary-addresses": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "requires feature 'ipv6-privacy-autoconf'"
+                      },
+                      "temporary-valid-lifetime": {
+                        "type": "integer",
+                        "default": 604800,
+                        "description": "requires feature 'ipv6-privacy-autoconf'"
+                      },
+                      "temporary-preferred-lifetime": {
+                        "type": "integer",
+                        "default": 86400,
+                        "description": "requires feature 'ipv6-privacy-autoconf'"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
