@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import contextlib
 import datetime as dt
 import json
 import logging
@@ -9,17 +10,20 @@ import signal
 import subprocess
 import sys
 import time
+
 import sysrepo
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s device-plugin: %(message)s")
 sysrepo.configure_logging(py_logging=True)
 BOOT_MONOTONIC = time.monotonic()
-BOOT_TIME = dt.datetime.now(dt.timezone.utc)
+BOOT_TIME = dt.datetime.now(dt.UTC)
 ALLOWED_NAME = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,14}$")
 PROTECTED = {"eth0", "lo"}
 
+
 def run(*args, check=True):
     return subprocess.run(args, check=check, text=True, capture_output=True)
+
 
 def find_key(mapping, suffix, default=None):
     if not isinstance(mapping, dict):
@@ -29,6 +33,7 @@ def find_key(mapping, suffix, default=None):
             return value
     return default
 
+
 def configured_interfaces(conn):
     with conn.start_session("running") as sess:
         try:
@@ -37,6 +42,7 @@ def configured_interfaces(conn):
             return []
     root_data = find_key(data, "interfaces", {})
     return find_key(root_data, "interface", []) or []
+
 
 def reconcile_kernel(conn):
     for interface in configured_interfaces(conn):
@@ -59,14 +65,16 @@ def reconcile_kernel(conn):
                     run("ip", "address", "add", f"{ip}/{prefix}", "dev", name)
         run("ip", "link", "set", "dev", name, "up" if interface.get("enabled", True) else "down")
 
+
 def link_snapshot():
     result = run("ip", "-j", "-s", "link", "show")
     return {item["ifname"]: item for item in json.loads(result.stdout)}
 
+
 async def interface_oper_data(xpath, private_data):
     conn = private_data
     links = link_snapshot()
-    now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    now = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
     output = []
     for config in configured_interfaces(conn):
         name = config.get("name")
@@ -75,27 +83,30 @@ async def interface_oper_data(xpath, private_data):
         enabled = config.get("enabled", True)
         stats = link.get("stats64") or link.get("stats") or {}
         rx, tx = stats.get("rx", {}), stats.get("tx", {})
-        output.append({
-            "name": name,
-            "admin-status": "up" if enabled else "down",
-            "oper-status": "up" if "UP" in flags else ("down" if link else "not-present"),
-            "last-change": now,
-            "if-index": int(link.get("ifindex", 1)),
-            "phys-address": link.get("address", "00:00:00:00:00:00"),
-            "speed": 10000000000 if name == "lo0" else 1000000000,
-            "statistics": {
-                "discontinuity-time": BOOT_TIME.isoformat(timespec="seconds"),
-                "in-octets": int(rx.get("bytes", 0)),
-                "in-unicast-pkts": int(rx.get("packets", 0)),
-                "in-discards": int(rx.get("dropped", 0)),
-                "in-errors": int(rx.get("errors", 0)),
-                "out-octets": int(tx.get("bytes", 0)),
-                "out-unicast-pkts": int(tx.get("packets", 0)),
-                "out-discards": int(tx.get("dropped", 0)),
-                "out-errors": int(tx.get("errors", 0)),
-            },
-        })
+        output.append(
+            {
+                "name": name,
+                "admin-status": "up" if enabled else "down",
+                "oper-status": "up" if "UP" in flags else ("down" if link else "not-present"),
+                "last-change": now,
+                "if-index": int(link.get("ifindex", 1)),
+                "phys-address": link.get("address", "00:00:00:00:00:00"),
+                "speed": 10000000000 if name == "lo0" else 1000000000,
+                "statistics": {
+                    "discontinuity-time": BOOT_TIME.isoformat(timespec="seconds"),
+                    "in-octets": int(rx.get("bytes", 0)),
+                    "in-unicast-pkts": int(rx.get("packets", 0)),
+                    "in-discards": int(rx.get("dropped", 0)),
+                    "in-errors": int(rx.get("errors", 0)),
+                    "out-octets": int(tx.get("bytes", 0)),
+                    "out-unicast-pkts": int(tx.get("packets", 0)),
+                    "out-discards": int(tx.get("dropped", 0)),
+                    "out-errors": int(tx.get("errors", 0)),
+                },
+            }
+        )
     return {"interfaces": {"interface": output}}
+
 
 async def system_oper_data(xpath, private_data):
     load = os.getloadavg()[0]
@@ -106,27 +117,64 @@ async def system_oper_data(xpath, private_data):
             key, value = line.split(":", 1)
             meminfo[key] = int(value.strip().split()[0])
     used = 100.0 * (1.0 - meminfo.get("MemAvailable", 0) / meminfo["MemTotal"])
-    return {"system": {"state": {
-        "vendor": "NETCONF Sandbox", "model": "Virtual Router SR-NP2",
-        "serial-number": "LAB-20260912-001", "software-version": "1.0.0",
-        "boot-time": BOOT_TIME.isoformat(timespec="seconds"),
-        "uptime-seconds": int(time.monotonic() - BOOT_MONOTONIC),
-        "cpu-percent": round(min(100.0, load * 100.0 / cpu_count), 1),
-        "memory-used-percent": round(used, 1),
-    }}}
+    return {
+        "system": {
+            "state": {
+                "vendor": "NETCONF Sandbox",
+                "model": "Virtual Router SR-NP2",
+                "serial-number": "LAB-20260912-001",
+                "software-version": "1.0.0",
+                "boot-time": BOOT_TIME.isoformat(timespec="seconds"),
+                "uptime-seconds": int(time.monotonic() - BOOT_MONOTONIC),
+                "cpu-percent": round(min(100.0, load * 100.0 / cpu_count), 1),
+                "memory-used-percent": round(used, 1),
+            }
+        }
+    }
+
 
 async def inventory_oper_data(xpath, private_data):
-    return {"inventory": {"component": [
-        {"name": "chassis-0", "class": "chassis", "serial-number": "LAB-20260912-001", "description": "Virtual chassis", "oper-status": "up"},
-        {"name": "routing-engine-0", "class": "module", "serial-number": "RE-0001", "description": "Virtual control plane", "oper-status": "up"},
-        {"name": "fan-0", "class": "fan", "serial-number": "FAN-0001", "description": "Virtual cooling", "oper-status": "up"},
-        {"name": "psu-0", "class": "power-supply", "serial-number": "PSU-0001", "description": "Virtual power supply", "oper-status": "up"},
-    ]}}
+    return {
+        "inventory": {
+            "component": [
+                {
+                    "name": "chassis-0",
+                    "class": "chassis",
+                    "serial-number": "LAB-20260912-001",
+                    "description": "Virtual chassis",
+                    "oper-status": "up",
+                },
+                {
+                    "name": "routing-engine-0",
+                    "class": "module",
+                    "serial-number": "RE-0001",
+                    "description": "Virtual control plane",
+                    "oper-status": "up",
+                },
+                {
+                    "name": "fan-0",
+                    "class": "fan",
+                    "serial-number": "FAN-0001",
+                    "description": "Virtual cooling",
+                    "oper-status": "up",
+                },
+                {
+                    "name": "psu-0",
+                    "class": "power-supply",
+                    "serial-number": "PSU-0001",
+                    "description": "Virtual power supply",
+                    "oper-status": "up",
+                },
+            ]
+        }
+    }
+
 
 async def module_change_cb(event, req_id, changes, private_data):
     if event == "done":
         logging.info("Configuración aplicada en %s (request-id=%s)", private_data, req_id)
     await asyncio.sleep(0)
+
 
 async def ping_rpc(xpath, input_params, event, private_data):
     if event != "rpc":
@@ -138,8 +186,13 @@ async def ping_rpc(xpath, input_params, event, private_data):
     match = re.search(r"(\d+) packets transmitted, (\d+) received", result.stdout)
     if match:
         received = int(match.group(2))
-    return {"success": received > 0, "packets-sent": count, "packets-received": received,
-            "message": "reachable" if received else "no response"}
+    return {
+        "success": received > 0,
+        "packets-sent": count,
+        "packets-received": received,
+        "message": "reachable" if received else "no response",
+    }
+
 
 async def reboot_rpc(xpath, input_params, event, private_data):
     global BOOT_MONOTONIC, BOOT_TIME
@@ -149,8 +202,9 @@ async def reboot_rpc(xpath, input_params, event, private_data):
     if delay:
         await asyncio.sleep(delay)
     BOOT_MONOTONIC = time.monotonic()
-    BOOT_TIME = dt.datetime.now(dt.timezone.utc)
+    BOOT_TIME = dt.datetime.now(dt.UTC)
     return {"accepted": True, "message": "Simulated reboot completed"}
+
 
 async def reconcile_loop(conn, stop_event):
     while not stop_event.is_set():
@@ -158,10 +212,9 @@ async def reconcile_loop(conn, stop_event):
             reconcile_kernel(conn)
         except Exception:
             logging.exception("Error reconciliando interfaces Linux")
-        try:
+        with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop_event.wait(), timeout=2)
-        except asyncio.TimeoutError:
-            pass
+
 
 def main():
     loop = asyncio.new_event_loop()
@@ -170,22 +223,53 @@ def main():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop_event.set)
     try:
-        with sysrepo.SysrepoConnection() as conn:
-            with conn.start_session() as sess:
-                sess.subscribe_module_change("ietf-interfaces", None, module_change_cb, private_data="ietf-interfaces", asyncio_register=True)
-                sess.subscribe_module_change("sandbox-device", None, module_change_cb, private_data="sandbox-device", asyncio_register=True)
-                sess.subscribe_oper_data_request("ietf-interfaces", "/ietf-interfaces:interfaces/interface", interface_oper_data, private_data=conn, asyncio_register=True, strict=True)
-                sess.subscribe_oper_data_request("sandbox-device", "/sandbox-device:system/state", system_oper_data, asyncio_register=True, strict=True)
-                sess.subscribe_oper_data_request("sandbox-device", "/sandbox-device:inventory", inventory_oper_data, asyncio_register=True, strict=True)
-                sess.subscribe_rpc_call("/sandbox-device:ping", ping_rpc, asyncio_register=True)
-                sess.subscribe_rpc_call("/sandbox-device:reboot", reboot_rpc, asyncio_register=True)
-                loop.run_until_complete(reconcile_loop(conn, stop_event))
+        with sysrepo.SysrepoConnection() as conn, conn.start_session() as sess:
+            sess.subscribe_module_change(
+                "ietf-interfaces",
+                None,
+                module_change_cb,
+                private_data="ietf-interfaces",
+                asyncio_register=True,
+            )
+            sess.subscribe_module_change(
+                "sandbox-device",
+                None,
+                module_change_cb,
+                private_data="sandbox-device",
+                asyncio_register=True,
+            )
+            sess.subscribe_oper_data_request(
+                "ietf-interfaces",
+                "/ietf-interfaces:interfaces/interface",
+                interface_oper_data,
+                private_data=conn,
+                asyncio_register=True,
+                strict=True,
+            )
+            sess.subscribe_oper_data_request(
+                "sandbox-device",
+                "/sandbox-device:system/state",
+                system_oper_data,
+                asyncio_register=True,
+                strict=True,
+            )
+            sess.subscribe_oper_data_request(
+                "sandbox-device",
+                "/sandbox-device:inventory",
+                inventory_oper_data,
+                asyncio_register=True,
+                strict=True,
+            )
+            sess.subscribe_rpc_call("/sandbox-device:ping", ping_rpc, asyncio_register=True)
+            sess.subscribe_rpc_call("/sandbox-device:reboot", reboot_rpc, asyncio_register=True)
+            loop.run_until_complete(reconcile_loop(conn, stop_event))
         return 0
     except Exception:
         logging.exception("El plugin terminó inesperadamente")
         return 1
     finally:
         loop.close()
+
 
 if __name__ == "__main__":
     sys.exit(main())
