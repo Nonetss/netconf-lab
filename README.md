@@ -183,7 +183,7 @@ Solo sobreescribe esos dos ficheros generados — nunca toca el `<módulo>.yaml`
 
 ### 4. Rellena el YAML real con autocompletado
 
-Copia `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez (ese es el que carga `sysrepocfg` en el primer arranque, ver `device/init/yaml_to_json.py` y `device/entrypoint.py:load_seed`) y edítalo con VS Code:
+Copia `<módulo>.example.yaml` a `<módulo>.yaml` (ese es el que carga `sysrepocfg` **en cada arranque** — ver `device/init/yaml_to_json.py` y `device/entrypoint.py:seed_datastores`) y edítalo con VS Code:
 
 1. Instala la extensión `redhat.vscode-yaml` (ya recomendada en `.vscode/extensions.json`).
 2. Abre la carpeta del repo como workspace — `.vscode/settings.json` ya mapea `interfaces.yaml`/`interfaces.example.yaml` a su `schema.json` vía `yaml.schemas`. Si en vez de eso abres el archivo suelto, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados activa el mismo autocompletado sin depender del workspace.
@@ -194,9 +194,9 @@ Copia `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez (ese es el que 
 `device/entrypoint.py` recorre `device/yang/` y `device/init/` en cada arranque, de forma genérica (no hay lista de módulos hardcodeada):
 
 - **`install_modules()`**: por cada `.yang` de cada `device/yang/<feature>/` que `sysrepoctl -l` no conozca todavía, lo instala (`sysrepoctl -i <fichero> -s <carpeta-feature> -e '*' ...`, con **todas** las features del módulo activadas). Si netopeer2/sysrepo ya trae ese módulo de fábrica (pasa con `ietf-interfaces`, `ietf-ip`, `ietf-netconf-acm`...) lo detecta por nombre y no lo reinstala — así que tu copia local en `device/yang/` puede ir a una revisión distinta sin conflicto, solo se usa para las herramientas de `scripts/`.
-- **`seed_datastores()`** (solo en el primer arranque, con volumen limpio): por cada `<feature>/<módulo>.yaml` bajo `device/init/` (nunca los `.example.yaml`), lo convierte a JSON y lo aplica con `sysrepocfg --edit` sin `-m` — el propio JSON ya lleva sus claves cualificadas por módulo (`"ietf-system:system":`, etc.), así que un fichero puede tocar más de un módulo a la vez sin que haga falta decírselo.
+- **`seed_datastores()`** (**en cada arranque**, no solo el primero — el volumen `sysrepo-data` sobrevive a un `--build`, así que un guardado "solo la primera vez" habría hecho invisible cualquier edición posterior): por cada `<feature>/<módulo>.yaml` bajo `device/init/` (nunca los `.example.yaml`), lo convierte a JSON y lo aplica con `sysrepocfg --edit` sin `-m` — el propio JSON ya lleva sus claves cualificadas por módulo (`"ietf-system:system":`, etc.), así que un fichero puede tocar más de un módulo a la vez sin que haga falta decírselo.
 
-En la práctica: crea la carpeta, copia el `.example.yaml` a `<módulo>.yaml`, rellénalo, y `docker compose down -v && docker compose up --build -d` — sin tocar `entrypoint.py` para nada, a menos que quieras servir estado operacional o RPCs de verdad (ver siguiente sección).
+En la práctica: crea la carpeta, copia el `.example.yaml` a `<módulo>.yaml`, rellénalo, y `docker compose up --build -d` (sin `-v`: el seed se reaplica solo) — sin tocar `entrypoint.py` para nada, a menos que quieras servir estado operacional o RPCs de verdad (ver siguiente sección). Solo hace falta `down -v` cuando cambias la **estructura** de un `.yang` ya instalado (nuevo leaf, container...) sin subir su `revision` — sysrepo tiene el esquema congelado desde el primer install y `sysrepoctl -U` solo actualiza si la revisión cambió.
 
 ## Qué está de verdad conectado
 
