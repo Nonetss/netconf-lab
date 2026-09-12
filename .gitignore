@@ -17,3 +17,7 @@ build/
 .idea/
 *.swp
 .DS_Store
+
+# Claude Code
+.agents/skills
+.claude
