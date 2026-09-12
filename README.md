@@ -159,11 +159,24 @@ docker compose up --build -d
 
 ## Añadir modelos YANG
 
-1. Copia el `.yang` a `device/yang/`.
-2. Añade en `device/entrypoint.py` un `sysrepoctl -i` idempotente.
-3. Añade datos iniciales en `device/init/` como YAML si son necesarios (se convierten a JSON y se cargan vía `sysrepocfg` en el primer arranque, ver `device/init/yaml_to_json.py`).
-4. Implementa callbacks en `device/netconf_lab/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
-5. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
+Convención: cada feature vive en su propia carpeta `device/yang/<feature>/`, con **todos** los `.yang` que necesita (módulo principal + imports + augments — p.ej. `device/yang/interfaz/` trae `ietf-interfaces` + `ietf-ip` + `iana-if-type` + `ietf-yang-types` + `ietf-inet-types`).
+
+1. Crea `device/yang/<feature>/` y mete ahí los `.yang` (los tuyos y sus dependencias).
+2. Genera el YAML de ejemplo y el JSON Schema para esa carpeta:
+
+   ```bash
+   uv run --with pyang python3 scripts/generate_config.py
+   ```
+
+   Sin argumentos: recorre todas las subcarpetas de `device/yang/` y escribe en `device/init/<feature>/` un `<módulo>.example.yaml` (esqueleto con placeholders, valores por defecto del YANG cuando los hay) y `<módulo>.schema.json` (para autocompletado, ver más abajo). Solo sobreescribe esos dos ficheros generados — nunca toca el `<módulo>.yaml` real editado a mano, así que se puede correr cuantas veces haga falta.
+3. Copia `<módulo>.example.yaml` a `<módulo>.yaml` (si no existe aún) y rellena los valores reales; ese es el que carga `sysrepocfg` en el primer arranque (ver `device/init/yaml_to_json.py` y `device/entrypoint.py:load_seed`).
+4. Añade en `device/entrypoint.py` un `sysrepoctl -i` idempotente para el módulo principal si el datastore no lo trae ya instalado (netopeer2/sysrepo instalan varios módulos IETF estándar de fábrica; revisa `sysrepoctl -l` dentro del contenedor).
+5. Implementa callbacks en `device/netconf_lab/` para nodos `config false`, RPCs o acciones.
+6. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
+
+### Autocompletado en el editor
+
+Cada `device/init/<feature>/<módulo>.schema.json` es un JSON Schema real (tipos, `enum` de identities derivadas —p.ej. los ~300 valores válidos de `type` en interfaces—, `required`, `default`). Con la extensión `redhat.vscode-yaml` (recomendada en `.vscode/extensions.json`) y el mapeo en `.vscode/settings.json` (`yaml.schemas`), VS Code sugiere claves y valores al editar `interfaces.yaml`/`interfaces.example.yaml`. Si abres el archivo suelto sin la carpeta del repo como workspace, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados también lo activa por su cuenta.
 
 ## Prueba automática
 
@@ -196,11 +209,16 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   │       ├── oper.py
 │   │       └── rpc.py
 │   ├── init/
-│   │   ├── interfaces.yaml
-│   │   ├── system.yaml
+│   │   ├── interfaz/
+│   │   │   ├── interfaces.yaml          # seed real, cargado en el primer arranque
+│   │   │   ├── interfaces.example.yaml  # generado, solo de referencia
+│   │   │   └── interfaces.schema.json   # generado, para autocompletado
 │   │   └── yaml_to_json.py      # convierte el YAML de arriba a JSON para sysrepocfg
-│   └── yang/sandbox-device.yang
-└── scripts/smoke-test.sh
+│   └── yang/
+│       └── interfaz/            # ietf-interfaces + ietf-ip + iana-if-type + tipos
+├── scripts/
+│   ├── generate_config.py       # device/yang/<feature>/ -> device/init/<feature>/*.example.yaml + *.schema.json
+│   └── smoke-test.sh
 ```
 
 ## Base técnica
