@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -11,6 +12,9 @@ IANA_IF_TYPE_YANG = (
 )
 INIT_FLAG = Path("/etc/sysrepo/.sandbox-initialized")
 YAML_TO_JSON = "/opt/sandbox/init/yaml_to_json.py"
+YANG_ROOT = Path("/opt/sandbox/yang")
+INIT_ROOT = Path("/opt/sandbox/init")
+MODULE_NAME_RE = re.compile(r"^module\s+([\w.-]+)\s*\{", re.M)
 
 ENV = {
     "USER": "root",
@@ -50,6 +54,52 @@ def implemented(modules, name):
     return "I" in modules.get(name, {}).get("flags", "")
 
 
+def known(modules, name):
+    return name in modules
+
+
+def module_name(yang_file):
+    match = MODULE_NAME_RE.search(yang_file.read_text(encoding="utf-8"))
+    return match.group(1) if match else None
+
+
+def install_feature_modules():
+    """Instala todo .yang bajo device/yang/<feature>/ que sysrepo no conozca
+    aun. No reinstala modulos que el propio netopeer2/sysrepo ya trae de
+    fabrica (p.ej. ietf-interfaces/ietf-ip a una revision mas nueva que nuestra
+    copia local, que solo existe para las herramientas de scripts/) ni los que
+    ya estan como import-only ("i") -- eso evita duplicados y conflictos de
+    revision, solo instala lo que de verdad falta."""
+    if not YANG_ROOT.is_dir():
+        return
+    for feature_dir in sorted(p for p in YANG_ROOT.iterdir() if p.is_dir()):
+        yang_files = sorted(feature_dir.glob("*.yang"))
+        if not yang_files:
+            continue
+        modules = list_modules()
+        for yang_file in yang_files:
+            name = module_name(yang_file)
+            if not name or known(modules, name):
+                continue
+            run(
+                [
+                    "sysrepoctl",
+                    "-i",
+                    str(yang_file),
+                    "-s",
+                    str(feature_dir),
+                    "-p",
+                    "666",
+                    "-o",
+                    "root",
+                    "-g",
+                    "root",
+                    "-v2",
+                ]
+            )
+            modules = list_modules()
+
+
 def install_modules():
     modules = list_modules()
     # ietf-interfaces importa iana-if-type, pero necesitamos que quede
@@ -74,33 +124,28 @@ def install_modules():
     for feature in ("arbitrary-names", "pre-provisioning", "if-mib"):
         if feature not in features:
             run(["sysrepoctl", "-c", "ietf-interfaces", "-e", feature, "-v2"])
+    install_feature_modules()
 
 
-def load_seed(module, yaml_name):
-    yaml_path = Path("/opt/sandbox/init") / yaml_name
+def load_seed(yaml_path):
     json_path = Path("/tmp") / yaml_path.with_suffix(".json").name
     run(["python3", YAML_TO_JSON, str(yaml_path), str(json_path)])
-    run(
-        [
-            "sysrepocfg",
-            f"--edit={json_path}",
-            "-d",
-            "running",
-            "-f",
-            "json",
-            "-m",
-            module,
-            "-v2",
-        ]
-    )
-    run(["sysrepocfg", "--copy-from=running", "-d", "startup", "-m", module, "-v2"])
+    run(["sysrepocfg", f"--edit={json_path}", "-d", "running", "-f", "json", "-v2"])
     json_path.unlink(missing_ok=True)
 
 
 def seed_datastores():
+    """Carga todo <feature>/<modulo>.yaml bajo device/init/ (nunca los
+    *.example.yaml generados, esos son solo referencia)."""
     if INIT_FLAG.exists():
         return
-    load_seed("ietf-interfaces", "interfaz/interfaces.yaml")
+    if INIT_ROOT.is_dir():
+        for feature_dir in sorted(p for p in INIT_ROOT.iterdir() if p.is_dir()):
+            for yaml_path in sorted(feature_dir.glob("*.yaml")):
+                if yaml_path.name.endswith(".example.yaml"):
+                    continue
+                load_seed(yaml_path)
+    run(["sysrepocfg", "--copy-from=running", "-d", "startup", "-v2"])
     INIT_FLAG.touch()
 
 
