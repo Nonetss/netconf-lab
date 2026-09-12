@@ -1,0 +1,29 @@
+name: netconf-sandbox
+services:
+  device:
+    image: ghcr.io/nonetss/netconf-lab:latest
+    pull_policy: always
+    platform: linux/amd64
+    container_name: netconf-device
+    hostname: router-lab-01
+    restart: unless-stopped
+    ports:
+      - "${NETCONF_PORT:-830}:830"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - sysrepo-data:/etc/sysrepo
+    networks:
+      management:
+        aliases: [router-lab-01]
+    healthcheck:
+      test: ["CMD-SHELL", "ss -ltn | grep -qE ':830[[:space:]]'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+volumes:
+  sysrepo-data:
+networks:
+  management:
+    driver: bridge
