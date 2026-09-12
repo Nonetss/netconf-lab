@@ -18,7 +18,7 @@ RUN sed -i \
 # ---- Etapa final ----
 FROM ${NETOPEER2_IMAGE}
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y iproute2 iputils-ping \
+    && apt-get install --no-install-recommends -y iproute2 iputils-ping python3-yaml \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=libnetconf2-patched /src/libnetconf2/build/libnetconf2.so.4.4.5 /tmp/libnetconf2.so.4.4.5
 RUN installed_path="$(find /usr/lib /lib -name 'libnetconf2.so.4.4.5' | head -n1)" \

@@ -7,7 +7,9 @@ authors = [
     { name = "Nonete", email = "amorenolopezbarajas@pm.me" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0.3",
+]
 
 [tool.uv]
 package = false

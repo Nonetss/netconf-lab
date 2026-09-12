@@ -39,10 +39,13 @@ fi
 /usr/share/netopeer2/scripts/merge_hostkey.sh
 /usr/share/netopeer2/scripts/merge_config.sh
 if [[ ! -f /etc/sysrepo/.sandbox-initialized ]]; then
-  sysrepocfg --edit=/opt/sandbox/init/interfaces.xml -d running -f xml -m ietf-interfaces -v2
+  python3 /opt/sandbox/init/yaml_to_json.py /opt/sandbox/init/interfaces.yaml /tmp/interfaces.json
+  sysrepocfg --edit=/tmp/interfaces.json -d running -f json -m ietf-interfaces -v2
   sysrepocfg --copy-from=running -d startup -m ietf-interfaces -v2
-  sysrepocfg --edit=/opt/sandbox/init/system.xml -d running -f xml -m sandbox-device -v2
+  python3 /opt/sandbox/init/yaml_to_json.py /opt/sandbox/init/system.yaml /tmp/system.json
+  sysrepocfg --edit=/tmp/system.json -d running -f json -m sandbox-device -v2
   sysrepocfg --copy-from=running -d startup -m sandbox-device -v2
+  rm -f /tmp/interfaces.json /tmp/system.json
   touch /etc/sysrepo/.sandbox-initialized
 fi
 cleanup() {

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<system xmlns="urn:sandbox:device">
-    <hostname>router-lab-01</hostname>
-    <location>Zurich Lab</location>
-    <contact>netops@example.invalid</contact>
-</system>
