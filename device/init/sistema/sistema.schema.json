@@ -1,0 +1,373 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ietf-netconf-acm, ietf-system config seed",
+  "type": "object",
+  "properties": {
+    "ietf-netconf-acm:nacm": {
+      "type": "object",
+      "properties": {
+        "enable-nacm": {
+          "type": "boolean",
+          "default": true
+        },
+        "read-default": {
+          "type": "string",
+          "default": "permit"
+        },
+        "write-default": {
+          "type": "string",
+          "default": "deny"
+        },
+        "exec-default": {
+          "type": "string",
+          "default": "permit"
+        },
+        "enable-external-groups": {
+          "type": "boolean",
+          "default": true
+        },
+        "groups": {
+          "type": "object",
+          "properties": {
+            "group": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "user-name": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "rule-list": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "group": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "rule": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "module-name": {
+                      "type": "string",
+                      "default": "*"
+                    },
+                    "rpc-name": {
+                      "type": "string"
+                    },
+                    "notification-name": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "mandatory"
+                    },
+                    "access-operations": {
+                      "type": "string",
+                      "default": "*"
+                    },
+                    "action": {
+                      "type": "string",
+                      "description": "mandatory"
+                    },
+                    "comment": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "action"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ietf-system:system": {
+      "type": "object",
+      "properties": {
+        "contact": {
+          "type": "string"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "clock": {
+          "type": "object",
+          "properties": {
+            "timezone-name": {
+              "type": "string"
+            },
+            "timezone-utc-offset": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "ntp": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "server": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "udp": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "description": "mandatory"
+                      },
+                      "port": {
+                        "type": "string",
+                        "default": "123",
+                        "description": "requires feature 'ntp-udp-port'"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "address"
+                    ]
+                  },
+                  "association-type": {
+                    "type": "string",
+                    "enum": [
+                      "server",
+                      "peer",
+                      "pool"
+                    ],
+                    "default": "server"
+                  },
+                  "iburst": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "prefer": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "dns-resolver": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "server": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "udp-and-tcp": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "description": "mandatory"
+                      },
+                      "port": {
+                        "type": "string",
+                        "default": "53",
+                        "description": "requires feature 'dns-udp-tcp-port'"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "address"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "options": {
+              "type": "object",
+              "properties": {
+                "timeout": {
+                  "type": "integer",
+                  "default": 5
+                },
+                "attempts": {
+                  "type": "integer",
+                  "default": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "radius": {
+          "type": "object",
+          "properties": {
+            "server": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "udp": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string",
+                        "description": "mandatory"
+                      },
+                      "authentication-port": {
+                        "type": "string",
+                        "default": "1812"
+                      },
+                      "shared-secret": {
+                        "type": "string",
+                        "description": "mandatory"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "address",
+                      "shared-secret"
+                    ]
+                  },
+                  "authentication-type": {
+                    "type": "string",
+                    "enum": [
+                      "ietf-system:radius-chap",
+                      "ietf-system:radius-pap"
+                    ],
+                    "default": "radius-pap"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "options": {
+              "type": "object",
+              "properties": {
+                "timeout": {
+                  "type": "integer",
+                  "default": 5
+                },
+                "attempts": {
+                  "type": "integer",
+                  "default": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "user-authentication-order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ietf-system:local-users",
+                  "ietf-system:radius"
+                ]
+              }
+            },
+            "user": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "authorized-key": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "algorithm": {
+                          "type": "string",
+                          "description": "mandatory"
+                        },
+                        "key-data": {
+                          "type": "string",
+                          "description": "mandatory"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "algorithm",
+                        "key-data"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

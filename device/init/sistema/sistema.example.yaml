@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=./sistema.schema.json
+"ietf-netconf-acm:nacm":
+  enable-nacm: true  # boolean
+  read-default: permit  # action-type
+  write-default: deny  # action-type
+  exec-default: permit  # action-type
+  enable-external-groups: true  # boolean
+  groups:
+    group:
+    - name: null  # group-name-type
+      user-name: []  # leaf-list, user-name-type
+  rule-list:
+  - name: null  # string
+    group: []  # leaf-list, union
+    rule:
+    - name: null  # string
+      module-name: *  # union
+      rpc-name: null  # union
+      notification-name: null  # union
+      path: null  # node-instance-identifier, mandatory
+      access-operations: *  # union
+      action: null  # action-type, mandatory
+      comment: null  # string
+"ietf-system:system":
+  contact: null  # string
+  hostname: null  # inet:domain-name
+  location: null  # string
+  clock:
+    timezone-name: null  # timezone-name
+    timezone-utc-offset: null  # int16
+  ntp:
+    enabled: true  # boolean
+    server:
+    - name: null  # string
+      udp:
+        address: null  # inet:host, mandatory
+        port: 123  # inet:port-number, if-feature ntp-udp-port
+      association-type: server  # enumeration, enum: server|peer|pool
+      iburst: false  # boolean
+      prefer: false  # boolean
+  dns-resolver:
+    search: []  # leaf-list, inet:domain-name
+    server:
+    - name: null  # string
+      udp-and-tcp:
+        address: null  # inet:ip-address, mandatory
+        port: 53  # inet:port-number, if-feature dns-udp-tcp-port
+    options:
+      timeout: 5  # uint8
+      attempts: 2  # uint8
+  radius:
+    server:
+    - name: null  # string
+      udp:
+        address: null  # inet:host, mandatory
+        authentication-port: 1812  # inet:port-number
+        shared-secret: null  # string, mandatory
+      authentication-type: radius-pap  # identityref base radius-authentication-type
+    options:
+      timeout: 5  # uint8
+      attempts: 2  # uint8
+  authentication:
+    user-authentication-order: []  # leaf-list, identityref base authentication-method
+    user:
+    - name: null  # string
+      password: null  # ianach:crypt-hash
+      authorized-key:
+      - name: null  # string
+        algorithm: null  # string, mandatory
+        key-data: null  # binary, mandatory
