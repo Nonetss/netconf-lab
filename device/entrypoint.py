@@ -10,7 +10,6 @@ from pathlib import Path
 IANA_IF_TYPE_YANG = (
     "/src/sysrepo/modules/subscribed_notifications/iana-if-type@2014-05-08.yang"
 )
-INIT_FLAG = Path("/etc/sysrepo/.sandbox-initialized")
 YAML_TO_JSON = "/opt/sandbox/init/yaml_to_json.py"
 YANG_ROOT = Path("/opt/sandbox/yang")
 INIT_ROOT = Path("/opt/sandbox/init")
@@ -140,9 +139,16 @@ def load_seed(yaml_path):
 
 def seed_datastores():
     """Carga todo <feature>/<modulo>.yaml bajo device/init/ (nunca los
-    *.example.yaml generados, esos son solo referencia)."""
-    if INIT_FLAG.exists():
-        return
+    *.example.yaml generados, esos son solo referencia) EN CADA ARRANQUE, no
+    solo la primera vez: el volumen sysrepo-data sobrevive a un `docker
+    compose up --build` (solo `down -v` lo borra), asi que si esto se
+    guardara detras de un flag de "ya inicializado", editar un .yaml y
+    reconstruir la imagen nunca se notaria -- exactamente el bug que este
+    lab tuvo. Reaplicar el seed cada vez es idempotente (sysrepocfg --edit
+    es un merge) y es justo lo que se espera de un lab donde los ficheros en
+    device/init/ son la fuente de verdad, no cambios hechos a mano por
+    NETCONF en caliente (esos se pierden en el siguiente arranque, a
+    proposito)."""
     if INIT_ROOT.is_dir():
         for feature_dir in sorted(p for p in INIT_ROOT.iterdir() if p.is_dir()):
             for yaml_path in sorted(feature_dir.glob("*.yaml")):
@@ -150,7 +156,6 @@ def seed_datastores():
                     continue
                 load_seed(yaml_path)
     run(["sysrepocfg", "--copy-from=running", "-d", "startup", "-v2"])
-    INIT_FLAG.touch()
 
 
 def terminate(procs, *_args):
