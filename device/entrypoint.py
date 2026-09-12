@@ -9,8 +9,6 @@ from pathlib import Path
 IANA_IF_TYPE_YANG = (
     "/src/sysrepo/modules/subscribed_notifications/iana-if-type@2014-05-08.yang"
 )
-SANDBOX_YANG = "/opt/sandbox/yang/sandbox-device.yang"
-SANDBOX_IF_EXT_YANG = "/opt/sandbox/yang/interfaz/sandbox-if-ext.yang"
 INIT_FLAG = Path("/etc/sysrepo/.sandbox-initialized")
 YAML_TO_JSON = "/opt/sandbox/init/yaml_to_json.py"
 
@@ -76,36 +74,6 @@ def install_modules():
     for feature in ("arbitrary-names", "pre-provisioning", "if-mib"):
         if feature not in features:
             run(["sysrepoctl", "-c", "ietf-interfaces", "-e", feature, "-v2"])
-    if "sandbox-device" not in modules:
-        run(
-            [
-                "sysrepoctl",
-                "-i",
-                SANDBOX_YANG,
-                "-p",
-                "666",
-                "-o",
-                "root",
-                "-g",
-                "root",
-                "-v2",
-            ]
-        )
-    if "sandbox-if-ext" not in modules:
-        run(
-            [
-                "sysrepoctl",
-                "-i",
-                SANDBOX_IF_EXT_YANG,
-                "-p",
-                "666",
-                "-o",
-                "root",
-                "-g",
-                "root",
-                "-v2",
-            ]
-        )
 
 
 def load_seed(module, yaml_name):
@@ -133,7 +101,6 @@ def seed_datastores():
     if INIT_FLAG.exists():
         return
     load_seed("ietf-interfaces", "interfaz/interfaces.yaml")
-    load_seed("sandbox-device", "system.yaml")
     INIT_FLAG.touch()
 
 
