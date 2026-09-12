@@ -196,6 +196,7 @@ def leaf_schema(node, identities):
     if type_stmt is None:
         return {"type": "string"}
     builtin, terminal = resolve_type_chain(type_stmt)
+    description_bits = []
 
     if builtin == "boolean":
         schema = {"type": "boolean"}
@@ -203,6 +204,13 @@ def leaf_schema(node, identities):
         schema = {"type": "integer"}
     elif builtin == "enumeration":
         schema = {"type": "string", "enum": [e.arg for e in terminal.search("enum")]}
+    elif builtin == "bits":
+        # valor real es una lista de bits separados por espacio (p.ej. "create update"),
+        # no un enum estricto de una sola opcion -- se documenta en la description.
+        names = [b.arg for b in terminal.search("bit")]
+        schema = {"type": "string"}
+        if names:
+            description_bits.append("bits (separados por espacio): " + "|".join(names))
     elif builtin == "identityref":
         base_stmt = terminal.search_one("base") or type_stmt.search_one("base")
         base_name = strip_prefix(base_stmt.arg) if base_stmt else None
@@ -225,7 +233,6 @@ def leaf_schema(node, identities):
         else:
             schema["default"] = default.arg
 
-    description_bits = []
     mandatory = node.search_one("mandatory")
     if mandatory and mandatory.arg == "true":
         description_bits.append("mandatory")

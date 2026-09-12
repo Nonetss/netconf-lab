@@ -33,7 +33,7 @@
         - name: deny-write # string
           module-name: "*" # union
           path: / # node-instance-identifier, mandatory
-          access-operations: write # union
+          access-operations: create update delete # union, bits: create|read|update|delete|exec
           action: deny # action-type, mandatory
           comment: No write access for operators # string
 "ietf-system:system":
