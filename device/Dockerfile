@@ -28,7 +28,7 @@ RUN installed_path="$(find /usr/lib /lib -name 'libnetconf2.so.4.4.5' | head -n1
 COPY yang/ /opt/sandbox/yang/
 COPY init/ /opt/sandbox/init/
 COPY netconf_lab/ /opt/sandbox/netconf_lab/
-COPY entrypoint.sh /usr/local/bin/netconf-sandbox-entrypoint
+COPY entrypoint.py /usr/local/bin/netconf-sandbox-entrypoint
 RUN chmod 0755 /usr/local/bin/netconf-sandbox-entrypoint
 ENV PYTHONPATH=/opt/sandbox
 EXPOSE 830

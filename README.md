@@ -160,7 +160,7 @@ docker compose up --build -d
 ## Añadir modelos YANG
 
 1. Copia el `.yang` a `device/yang/`.
-2. Añade en `device/entrypoint.sh` un `sysrepoctl -i` idempotente.
+2. Añade en `device/entrypoint.py` un `sysrepoctl -i` idempotente.
 3. Añade datos iniciales en `device/init/` como YAML si son necesarios (se convierten a JSON y se cargan vía `sysrepocfg` en el primer arranque, ver `device/init/yaml_to_json.py`).
 4. Implementa callbacks en `device/netconf_lab/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
 5. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
@@ -183,7 +183,7 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   └── docker-build.yml         # smoke test + publish a GHCR en push a main
 ├── device
 │   ├── Dockerfile
-│   ├── entrypoint.sh
+│   ├── entrypoint.py
 │   ├── netconf_lab/
 │   │   ├── __main__.py          # bootstrap: loop, señales, conexión sysrepo
 │   │   ├── logging_conf.py
