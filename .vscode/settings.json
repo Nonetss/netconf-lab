@@ -33,5 +33,9 @@
     "**/.venv": true,
     ".claude": true,
     ".agents": true
+  },
+  "[xml]": {
+    "editor.defaultFormatter": "PrateekMahendrakar.prettyxml",
+    "editor.formatOnSave": true
   }
 }

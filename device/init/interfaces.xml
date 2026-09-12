@@ -1,24 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
-  <interface>
-    <name>ge0</name><description>Uplink de laboratorio</description>
-    <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type><enabled>true</enabled>
-    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"><enabled>true</enabled><forwarding>false</forwarding><mtu>1500</mtu>
-      <address><ip>192.0.2.1</ip><prefix-length>24</prefix-length></address>
-      <address><ip>10.1.1.10</ip><prefix-length>24</prefix-length></address>
-    </ipv4>
-  </interface>
-  <interface>
-    <name>ge1</name><description>Enlace de acceso deshabilitado</description>
-    <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type><enabled>false</enabled>
-    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"><enabled>true</enabled><forwarding>false</forwarding><mtu>1500</mtu>
-      <address><ip>198.51.100.1</ip><prefix-length>24</prefix-length></address>
-    </ipv4>
-  </interface>
-  <interface>
-    <name>lo0</name><description>Loopback del dispositivo</description>
-    <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:softwareLoopback</type><enabled>true</enabled>
-    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"><enabled>true</enabled><forwarding>false</forwarding><mtu>65535</mtu>
-      <address><ip>203.0.113.1</ip><prefix-length>32</prefix-length></address>
-    </ipv4>
-  </interface>
+    <interface>
+        <name>ge0</name>
+        <description>Uplink de laboratorio</description>
+        <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+        <enabled>true</enabled>
+        <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+            <enabled>true</enabled>
+            <forwarding>false</forwarding>
+            <mtu>1500</mtu>
+            <address>
+                <ip>192.0.2.1</ip>
+                <prefix-length>24</prefix-length>
+            </address>
+            <address>
+                <ip>10.1.1.10</ip>
+                <prefix-length>24</prefix-length>
+            </address>
+        </ipv4>
+    </interface>
+    <interface>
+        <name>ge1</name>
+        <description>Enlace de acceso deshabilitado</description>
+        <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+        <enabled>false</enabled>
+        <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+            <enabled>true</enabled>
+            <forwarding>false</forwarding>
+            <mtu>1500</mtu>
+            <address>
+                <ip>198.51.100.1</ip>
+                <prefix-length>24</prefix-length>
+            </address>
+        </ipv4>
+    </interface>
+    <interface>
+        <name>lo0</name>
+        <description>Loopback del dispositivo</description>
+        <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:softwareLoopback</type>
+        <enabled>true</enabled>
+        <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+            <enabled>true</enabled>
+            <forwarding>false</forwarding>
+            <mtu>65535</mtu>
+            <address>
+                <ip>203.0.113.1</ip>
+                <prefix-length>32</prefix-length>
+            </address>
+        </ipv4>
+    </interface>
 </interfaces>
