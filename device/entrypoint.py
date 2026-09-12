@@ -116,7 +116,7 @@ def load_seed(module, yaml_name):
 def seed_datastores():
     if INIT_FLAG.exists():
         return
-    load_seed("ietf-interfaces", "interfaces.yaml")
+    load_seed("ietf-interfaces", "interfaz/interfaces.yaml")
     load_seed("sandbox-device", "system.yaml")
     INIT_FLAG.touch()
 
