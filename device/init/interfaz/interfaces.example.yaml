@@ -1,36 +1,35 @@
 # yaml-language-server: $schema=./interfaces.schema.json
 "ietf-interfaces:interfaces":
   interface:
-    - name: null # string
-      description: null # string
-      type: null # identityref base interface-type, mandatory
-      enabled: true # boolean
-      link-up-down-trap-enable: null # enumeration, if-feature if-mib, enum: enabled|disabled
-      "ietf-ip:ipv4":
-        enabled: true # boolean
-        forwarding: false # boolean
-        mtu: null # uint16
-        address:
-          - ip: null # inet:ipv4-address-no-zone
-            prefix-length: null # uint8
-            netmask: null # yang:dotted-quad, if-feature ipv4-non-contiguous-netmasks
-        neighbor:
-          - ip: null # inet:ipv4-address-no-zone
-            link-layer-address: null # yang:phys-address, mandatory
-      "ietf-ip:ipv6":
-        enabled: true # boolean
-        forwarding: false # boolean
-        mtu: null # uint32
-        address:
-          - ip: null # inet:ipv6-address-no-zone
-            prefix-length: null # uint8, mandatory
-        neighbor:
-          - ip: null # inet:ipv6-address-no-zone
-            link-layer-address: null # yang:phys-address, mandatory
-        dup-addr-detect-transmits: 1 # uint32
-        autoconf:
-          create-global-addresses: true # boolean
-          create-temporary-addresses: false # boolean, if-feature ipv6-privacy-autoconf
-          temporary-valid-lifetime: 604800 # uint32, if-feature ipv6-privacy-autoconf
-          temporary-preferred-lifetime: 86400 # uint32, if-feature ipv6-privacy-autoconf
-      "sandbox-if-ext:mac-address": null # yang:mac-address
+  - name: null  # string
+    description: null  # string
+    type: null  # identityref base interface-type, mandatory
+    enabled: true  # boolean
+    link-up-down-trap-enable: null  # enumeration, if-feature if-mib, enum: enabled|disabled
+    "ietf-ip:ipv4":
+      enabled: true  # boolean
+      forwarding: false  # boolean
+      mtu: null  # uint16
+      address:
+      - ip: null  # inet:ipv4-address-no-zone
+        prefix-length: null  # uint8
+        netmask: null  # yang:dotted-quad, if-feature ipv4-non-contiguous-netmasks
+      neighbor:
+      - ip: null  # inet:ipv4-address-no-zone
+        link-layer-address: null  # yang:phys-address, mandatory
+    "ietf-ip:ipv6":
+      enabled: true  # boolean
+      forwarding: false  # boolean
+      mtu: null  # uint32
+      address:
+      - ip: null  # inet:ipv6-address-no-zone
+        prefix-length: null  # uint8, mandatory
+      neighbor:
+      - ip: null  # inet:ipv6-address-no-zone
+        link-layer-address: null  # yang:phys-address, mandatory
+      dup-addr-detect-transmits: 1  # uint32
+      autoconf:
+        create-global-addresses: true  # boolean
+        create-temporary-addresses: false  # boolean, if-feature ipv6-privacy-autoconf
+        temporary-valid-lifetime: 604800  # uint32, if-feature ipv6-privacy-autoconf
+        temporary-preferred-lifetime: 86400  # uint32, if-feature ipv6-privacy-autoconf
