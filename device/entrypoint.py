@@ -10,6 +10,7 @@ IANA_IF_TYPE_YANG = (
     "/src/sysrepo/modules/subscribed_notifications/iana-if-type@2014-05-08.yang"
 )
 SANDBOX_YANG = "/opt/sandbox/yang/sandbox-device.yang"
+SANDBOX_IF_EXT_YANG = "/opt/sandbox/yang/interfaz/sandbox-if-ext.yang"
 INIT_FLAG = Path("/etc/sysrepo/.sandbox-initialized")
 YAML_TO_JSON = "/opt/sandbox/init/yaml_to_json.py"
 
@@ -81,6 +82,21 @@ def install_modules():
                 "sysrepoctl",
                 "-i",
                 SANDBOX_YANG,
+                "-p",
+                "666",
+                "-o",
+                "root",
+                "-g",
+                "root",
+                "-v2",
+            ]
+        )
+    if "sandbox-if-ext" not in modules:
+        run(
+            [
+                "sysrepoctl",
+                "-i",
+                SANDBOX_IF_EXT_YANG,
                 "-p",
                 "666",
                 "-o",
