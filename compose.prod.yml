@@ -15,9 +15,9 @@ services:
       - sysrepo-data:/etc/sysrepo
     networks:
       management:
-        aliases: [router-lab-01]
+        aliases: [ router-lab-01 ]
     healthcheck:
-      test: ["CMD-SHELL", "ss -ltn | grep -qE ':830[[:space:]]'"]
+      test: [ "CMD-SHELL", "ss -ltn | grep -qE ':830[[:space:]]'" ]
       interval: 5s
       timeout: 3s
       retries: 20
