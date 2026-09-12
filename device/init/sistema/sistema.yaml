@@ -77,11 +77,11 @@
     user-authentication-order: [ietf-system:local-users] # leaf-list, identityref base authentication-method
     user:
       - name: root # string
-        password: "$6$lab$rounds=2000$..." # ianach:crypt-hash
+        password: "$6$rounds=2000$labsalt1$odJFCrnl2edlBDdz1C5Jau2RJtBRnlWmTSHf6pWkLUyifDLkDmWJ6UuVTAIjvFu7WICPhDeOZIiBOB/Y6sHrFH" # ianach:crypt-hash
         authorized-key:
           - name: lab-key # string
             algorithm: ssh-rsa # string, mandatory
-            key-data: AAAAB3NzaC1yc2EAAAADAQABAAABAQ... # binary, mandatory
+            key-data: bGFiLWZha2Utc3NoLWtleS1kYXRhLW5vdC1yZWFs # binary, mandatory
       - name: ops # string
-        password: "$6$lab$rounds=2000$..." # ianach:crypt-hash
+        password: "$6$rounds=2000$labsalt1$odJFCrnl2edlBDdz1C5Jau2RJtBRnlWmTSHf6pWkLUyifDLkDmWJ6UuVTAIjvFu7WICPhDeOZIiBOB/Y6sHrFH" # ianach:crypt-hash
         authorized-key: []

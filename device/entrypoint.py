@@ -65,11 +65,13 @@ def module_name(yang_file):
 
 def install_feature_modules():
     """Instala todo .yang bajo device/yang/<feature>/ que sysrepo no conozca
-    aun. No reinstala modulos que el propio netopeer2/sysrepo ya trae de
-    fabrica (p.ej. ietf-interfaces/ietf-ip a una revision mas nueva que nuestra
-    copia local, que solo existe para las herramientas de scripts/) ni los que
-    ya estan como import-only ("i") -- eso evita duplicados y conflictos de
-    revision, solo instala lo que de verdad falta."""
+    aun, con todas sus features activadas (-e '*') para que un seed que use
+    un nodo bajo if-feature no falle por sorpresa. No reinstala modulos que
+    el propio netopeer2/sysrepo ya trae de fabrica (p.ej. ietf-interfaces/
+    ietf-ip a una revision mas nueva que nuestra copia local, que solo existe
+    para las herramientas de scripts/) ni los que ya estan como import-only
+    ("i") -- eso evita duplicados y conflictos de revision, solo instala lo
+    que de verdad falta."""
     if not YANG_ROOT.is_dir():
         return
     for feature_dir in sorted(p for p in YANG_ROOT.iterdir() if p.is_dir()):
@@ -88,6 +90,8 @@ def install_feature_modules():
                     str(yang_file),
                     "-s",
                     str(feature_dir),
+                    "-e",
+                    "*",
                     "-p",
                     "666",
                     "-o",
