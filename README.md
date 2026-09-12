@@ -2,6 +2,15 @@
 
 Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip`, un modelo `sandbox-device`, estado operacional dinámico y RPCs.
 
+## Para qué sirve
+
+Un target NETCONF real (config + estado + RPCs sobre datastores de verdad) contra el que probar cosas sin tocar hardware ni un router de producción:
+
+- Aprender o enseñar NETCONF/YANG con `netopeer2-cli` o cualquier cliente, sin depender de acceso a un dispositivo físico.
+- Desarrollar y probar clientes/automatización NETCONF (scripts propios, colecciones Ansible, gateways RESTCONF, etc.) contra un servidor que reacciona de verdad — activar `ge1` mueve una interfaz `dummy` real dentro del contenedor.
+- Usarlo como dependencia de integración en CI para herramientas que hablan NETCONF (así se usa en `.github/workflows/docker-build.yml`, ver `scripts/smoke-test.sh`).
+- Diseñar tu propio modelo YANG y aprender a cablear config/estado/RPCs a un backend real, partiendo de `sandbox-device` como ejemplo mínimo.
+
 ## Qué simula
 
 - NETCONF sobre SSH en TCP/830.
@@ -18,7 +27,7 @@ Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket q
 
 ## Arranque rápido
 
-Requisitos: Docker Engine/Desktop con Compose v2. `sysrepo/netopeer2` sólo publica build `linux/amd64` (no hay `arm64` oficial ni un fork de terceros en el que confiar); `compose.yaml` fija esa plataforma explícitamente, así que en un host ARM se ejecuta vía emulación QEMU en vez de nativo.
+Requisitos: Docker Engine/Desktop con Compose v2. `sysrepo/netopeer2` sólo publica build `linux/amd64` (no hay `arm64` oficial ni un fork de terceros en el que confiar); `compose.yml` fija esa plataforma explícitamente, así que en un host ARM se ejecuta vía emulación QEMU en vez de nativo.
 
 - **Docker Desktop (macOS Apple Silicon, Windows on ARM):** la emulación viene integrada, no hace falta nada más.
 - **Linux arm64:** instala soporte binfmt una vez por host: `docker run --privileged --rm tonistiigi/binfmt --install all`.
@@ -39,6 +48,18 @@ Credenciales de laboratorio:
 - Contraseña: `netconf`
 
 No expongas este servicio a Internet: las credenciales son deliberadamente simples y `hostkey_verify=False` sólo es apropiado para el laboratorio.
+
+## Imagen publicada (sin build local)
+
+`compose.yml` construye la imagen en tu máquina. Si solo quieres levantar el laboratorio sin compilar nada, usa `compose.prod.yml`, que apunta a la imagen ya construida en GHCR:
+
+```bash
+cp .env.example .env
+docker compose -f compose.prod.yml up -d
+docker compose -f compose.prod.yml ps
+```
+
+Es exactamente el mismo servicio (puerto, volumen `sysrepo-data`, red, healthcheck); la única diferencia es `image: ghcr.io/nonetss/netconf-lab:latest` + `pull_policy: always` en vez de `build:`. `.github/workflows/docker-build.yml` reconstruye y publica esa imagen en cada push a `main` que pase el smoke test, con tags `latest` y `sha-<commit>` — usa el tag por `sha` en vez de `latest` si necesitas fijar una versión concreta.
 
 ## Probar sin cliente NETCONF externo
 
@@ -140,7 +161,7 @@ docker compose up --build -d
 
 1. Copia el `.yang` a `device/yang/`.
 2. Añade en `device/entrypoint.sh` un `sysrepoctl -i` idempotente.
-3. Añade datos iniciales XML en `device/init/` si son necesarios.
+3. Añade datos iniciales en `device/init/` como YAML si son necesarios (se convierten a JSON y se cargan vía `sysrepocfg` en el primer arranque, ver `device/init/yaml_to_json.py`).
 4. Implementa callbacks en `device/netconf_lab/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
 5. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
 
@@ -156,7 +177,10 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 
 ```text
 .
-├── compose.yaml
+├── compose.yml                  # desarrollo: build local de device/
+├── compose.prod.yml             # producción: pull de ghcr.io/nonetss/netconf-lab
+├── .github/workflows/
+│   └── docker-build.yml         # smoke test + publish a GHCR en push a main
 ├── device
 │   ├── Dockerfile
 │   ├── entrypoint.sh
@@ -171,8 +195,10 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   │   └── system/              # todo sandbox-device
 │   │       ├── oper.py
 │   │       └── rpc.py
-│   ├── init/interfaces.xml
-│   ├── init/system.xml
+│   ├── init/
+│   │   ├── interfaces.yaml
+│   │   ├── system.yaml
+│   │   └── yaml_to_json.py      # convierte el YAML de arriba a JSON para sysrepocfg
 │   └── yang/sandbox-device.yang
 └── scripts/smoke-test.sh
 ```
