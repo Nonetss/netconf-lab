@@ -473,6 +473,9 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "sandbox-if-ext:mac-address": {
+                "type": "string"
               }
             },
             "additionalProperties": false,
