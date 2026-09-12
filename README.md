@@ -1,29 +1,28 @@
 # Sandbox NETCONF con Docker Compose
 
-Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip` (interfaces reales, reconciliadas contra el Linux del contenedor), un modelo propio `sandbox-device` (sistema, inventario, RPCs), estado operacional dinámico y RPCs.
+Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip` (interfaces reales, reconciliadas contra el Linux del contenedor).
 
-> `ietf-system` y `openconfig-platform` están **preparados como YANG de referencia** (`device/yang/sistema/`, `device/yang/plataforma/`) con su YAML de ejemplo y JSON Schema generados, pero **todavía no están conectados** al contenedor — no se instalan en `entrypoint.py` ni tienen callbacks en `device/netconf_lab/`. Ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
+> `ietf-system` y `openconfig-platform` están **preparados como YANG de referencia** (`device/yang/sistema/`, `device/yang/plataforma/`) con su YAML de ejemplo y JSON Schema generados, pero **todavía no están conectados** al contenedor — no se instalan en `entrypoint.py` ni tienen callbacks en `device/netconf_lab/`. Hoy el lab solo sirve `ietf-interfaces` de verdad. Ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
 
 ## Para qué sirve
 
 Un target NETCONF real (config + estado + RPCs sobre datastores de verdad) contra el que probar cosas sin tocar hardware ni un router de producción:
 
 - Aprender o enseñar NETCONF/YANG con `netopeer2-cli` o cualquier cliente, sin depender de acceso a un dispositivo físico.
-- Desarrollar y probar clientes/automatización NETCONF (scripts propios, colecciones Ansible, gateways RESTCONF, etc.) contra un servidor que reacciona de verdad — activar `ge1` mueve una interfaz `dummy` real dentro del contenedor.
+- Desarrollar y probar clientes/automatización NETCONF (scripts propios, colecciones Ansible, gateways RESTCONF, etc.) contra un servidor que reacciona de verdad — crear o activar una interfaz mueve una interfaz `dummy` real dentro del contenedor.
 - Usarlo como dependencia de integración en CI para herramientas que hablan NETCONF (así se usa en `.github/workflows/docker-build.yml`, ver `scripts/smoke-test.sh`).
-- Diseñar tu propio modelo YANG y aprender a cablear config/estado/RPCs a un backend real, partiendo de `sandbox-device` como ejemplo mínimo.
+- Traer un modelo YANG estándar (RFC de IETF/IANA, OpenConfig) y aprender a cablear su config/estado a un backend real siguiendo la convención `device/yang/<feature>/` (ver [Añadir modelos YANG](#añadir-modelos-yang)).
 
 ## Qué simula
 
 - NETCONF sobre SSH en TCP/830.
 - Datastores `running`, `startup` y `candidate`.
 - Interfaces configurables con `ietf-interfaces`/`ietf-ip` (`device/init/interfaz/interfaces.yaml` trae una interfaz `eth0` de ejemplo — el nombre y los datos son tuyos, edítalos).
-- Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU, MAC (vía el augment propio `sandbox-if-ext:mac-address`) y direcciones IPv4 se reconcilian desde la configuración YANG.
-- Estado operacional: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
-- Sistema (`sandbox-device`, propio): hostname, ubicación, versión, serial, uptime, CPU y memoria.
-- Inventario virtual de chasis, control plane, ventilador y fuente (`sandbox-device`, propio).
-- RPCs de laboratorio: `ping` y `reboot` simulado.
+- Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU y direcciones IPv4 se reconcilian desde la configuración YANG.
+- Estado operacional de interfaz: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
 - Persistencia del datastore en un volumen Docker.
+
+Sistema, inventario de chasis y RPCs de laboratorio (`ping`/`reboot`) **no están implementados ahora mismo** — existían en un modelo propio (`sandbox-device`) que se quitó del proyecto porque solo se quieren modelos estándar aquí. `ietf-system` y `openconfig-platform` son el camino previsto para recuperar esas dos primeras piezas; ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
 
 > La configuración sólo altera interfaces `dummy` del contenedor. No configura las interfaces del host ni reenvía tráfico como un router real.
 
