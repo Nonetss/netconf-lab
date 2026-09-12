@@ -35,21 +35,33 @@ Credenciales de laboratorio:
 
 No expongas este servicio a Internet: las credenciales son deliberadamente simples y `hostkey_verify=False` sólo es apropiado para el laboratorio.
 
-## Probar con Python
+## Probar sin cliente NETCONF externo
+
+Por ahora el laboratorio sólo levanta el contenedor `device`; no hay un cliente
+NETCONF dedicado. Puedes ejercitar el datastore directamente con `sysrepocfg`
+dentro del contenedor:
 
 ```bash
-# Capacidades, running y estado operacional
-docker compose exec client python examples/get_all.py
+# Running config de interfaces
+docker compose exec device sysrepocfg -X -d running -m ietf-interfaces -f xml
 
 # Cambiar hostname
-docker compose exec client python examples/edit_hostname.py router-zrh-01
+echo '<system xmlns="urn:sandbox:device"><hostname>router-zrh-01</hostname></system>' \
+  | docker compose exec -T device sysrepocfg --edit -d running -m sandbox-device -f xml
 
-# Activar o desactivar ge1; el cambio llega a la interfaz Linux dummy
-docker compose exec client python examples/toggle_interface.py ge1 true
+# Activar ge1; el cambio llega a la interfaz Linux dummy
+echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface><name>ge1</name><enabled>true</enabled></interface></interfaces>' \
+  | docker compose exec -T device sysrepocfg --edit -d running -m ietf-interfaces -f xml
 
 # Ejecutar el RPC YANG ping
-docker compose exec client python examples/rpc_ping.py 127.0.0.1
+echo '<ping xmlns="urn:sandbox:device"><destination>127.0.0.1</destination><count>3</count></ping>' \
+  | docker compose exec -T device sysrepocfg --rpc -f xml
+
+# Estado operacional completo
+docker compose exec device sysrepocfg -X -d operational -m sandbox-device -f xml
 ```
+
+`scripts/smoke-test.sh` (ejecutado por `make test`) automatiza estos mismos pasos.
 
 ## Cliente interactivo
 
@@ -147,13 +159,36 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   ├── init/interfaces.xml
 │   ├── init/system.xml
 │   └── yang/sandbox-device.yang
-├── client
-│   ├── Dockerfile
-│   └── examples/
 ├── scripts/smoke-test.sh
 └── Makefile
 ```
 
+> Existe también un directorio `client/` con ejemplos en Python (`ncclient`),
+> pero de momento no está integrado en `compose.yaml` ni cubierto por el smoke
+> test: el foco actual del proyecto es el `device`.
+
 ## Base técnica
 
 Netopeer2 implementa el servidor NETCONF sobre libyang/libnetconf2 y usa Sysrepo como datastore. El proyecto fija la imagen `sysrepo/netopeer2` por digest para evitar que una reconstrucción cambie silenciosamente; puedes sustituirla mediante `NETOPEER2_IMAGE`.
+
+## Desarrollo
+
+El plugin del device (`device/app/device_plugin.py`) se lintea y formatea con [ruff](https://docs.astral.sh/ruff/) vía [uv](https://docs.astral.sh/uv/):
+
+```bash
+make lint
+# equivalente a:
+uv run ruff check .
+uv run ruff format --check .
+```
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) ejecuta en cada push/PR:
+
+- `lint`: `ruff check` + `ruff format --check`.
+- `smoke-test`: construye el `device`, lo levanta y corre `scripts/smoke-test.sh`.
+
+## Licencia
+
+[MIT](LICENSE).
