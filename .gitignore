@@ -1,0 +1,19 @@
+# Entorno
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Empaquetado Python
+dist/
+build/
+*.egg-info/
+
+# Artefactos de smoke test / uso local
+/tmp/netconf-*.xml
+
+# Editores / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
