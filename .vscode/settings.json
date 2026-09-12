@@ -37,5 +37,11 @@
   "[xml]": {
     "editor.defaultFormatter": "PrateekMahendrakar.prettyxml",
     "editor.formatOnSave": true
+  },
+  "yaml.schemas": {
+    "./device/init/interfaz/interfaces.schema.json": [
+      "device/init/interfaz/interfaces.yaml",
+      "device/init/interfaz/interfaces.example.yaml"
+    ]
   }
 }
