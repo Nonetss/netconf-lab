@@ -17,8 +17,9 @@ RUN sed -i \
     && ldconfig
 COPY yang/ /opt/sandbox/yang/
 COPY init/ /opt/sandbox/init/
-COPY app/ /opt/sandbox/app/
+COPY device_plugin/ /opt/sandbox/device_plugin/
 COPY entrypoint.sh /usr/local/bin/netconf-sandbox-entrypoint
-RUN chmod 0755 /usr/local/bin/netconf-sandbox-entrypoint /opt/sandbox/app/device_plugin.py
+RUN chmod 0755 /usr/local/bin/netconf-sandbox-entrypoint
+ENV PYTHONPATH=/opt/sandbox
 EXPOSE 830
 ENTRYPOINT ["/usr/local/bin/netconf-sandbox-entrypoint"]
