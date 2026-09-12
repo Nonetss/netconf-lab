@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG NETOPEER2_IMAGE=sysrepo/netopeer2@sha256:efc408c392a2970f211227ba3a79fe157281e3d2914b8c4298095e6be4f4fe91
+ARG NETOPEER2_IMAGE=sysrepo/netopeer2
 
 # ---- Etapa "patch": recompila libnetconf2 con el hello YANG 1.1 corregido ----
 # libnetconf2 filtra del <hello> los modulos YANG 1.1 (nc_send_hello_io llama a
