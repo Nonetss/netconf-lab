@@ -1,0 +1,31 @@
+module sandbox-if-ext {
+  yang-version 1.1;
+  namespace "urn:sandbox:if-ext";
+  prefix sbif;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization "netconf-lab";
+  description
+    "Extensiones propias del laboratorio sobre ietf-interfaces: nada
+     de esto es estandar, es config que necesita el sandbox y que
+     ietf-interfaces/ietf-ip no cubren.";
+
+  revision 2026-09-12 {
+    description "Primera revision: mac-address fija por interfaz.";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    leaf mac-address {
+      type yang:mac-address;
+      description
+        "MAC fija para la interfaz dummy del contenedor. Si no se
+         configura, se deja la que asigne el kernel al crear el link.";
+    }
+  }
+}
