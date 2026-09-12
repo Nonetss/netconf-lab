@@ -133,24 +133,62 @@ docker compose up --build -d
 
 ## Añadir modelos YANG
 
-Convención: cada feature vive en su propia carpeta `device/yang/<feature>/`, con **todos** los `.yang` que necesita (módulo principal + imports + augments — p.ej. `device/yang/interfaz/` trae `ietf-interfaces` + `ietf-ip` + `iana-if-type` + `ietf-yang-types` + `ietf-inet-types`).
+Este proyecto solo usa modelos **estándar** (RFC de IETF/IANA, OpenConfig) — nada de módulos propios inventados a mano. El flujo completo, de "quiero este modelo" a "tengo un YAML validado con autocompletado", es este:
 
-1. Crea `device/yang/<feature>/` y mete ahí los `.yang` (los tuyos y sus dependencias).
-2. Genera el YAML de ejemplo y el JSON Schema para esa carpeta:
+### 1. Convención de carpetas
 
-   ```bash
-   uv run --with pyang python3 scripts/generate_config.py
-   ```
+Cada feature vive en su propia carpeta `device/yang/<feature>/`, con **todos** los `.yang` que necesita ahí dentro: el módulo principal + todo lo que importa (imports) + todo lo que lo amplía (augments), sin compartir nada con otras carpetas. Así cada carpeta se puede cargar sola, sin depender de qué más haya instalado. Por ejemplo `device/yang/interfaz/` trae 5 ficheros: `ietf-interfaces.yang` (el módulo que quieres) + `ietf-ip.yang` (lo amplía con IPv4/IPv6) + `iana-if-type.yang` (de donde salen los valores de `type`) + `ietf-yang-types.yang` + `ietf-inet-types.yang` (tipos que los anteriores importan).
 
-   Sin argumentos: recorre todas las subcarpetas de `device/yang/` y escribe en `device/init/<feature>/` un `<módulo>.example.yaml` (esqueleto con placeholders, valores por defecto del YANG cuando los hay) y `<módulo>.schema.json` (para autocompletado, ver más abajo). Solo sobreescribe esos dos ficheros generados — nunca toca el `<módulo>.yaml` real editado a mano, así que se puede correr cuantas veces haga falta.
-3. Copia `<módulo>.example.yaml` a `<módulo>.yaml` (si no existe aún) y rellena los valores reales; ese es el que carga `sysrepocfg` en el primer arranque (ver `device/init/yaml_to_json.py` y `device/entrypoint.py:load_seed`).
-4. Añade en `device/entrypoint.py` un `sysrepoctl -i` idempotente para el módulo principal si el datastore no lo trae ya instalado (netopeer2/sysrepo instalan varios módulos IETF estándar de fábrica; revisa `sysrepoctl -l` dentro del contenedor).
-5. Implementa callbacks en `device/netconf_lab/` para nodos `config false`, RPCs o acciones.
-6. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
+### 2. Descarga el `.yang`
 
-### Autocompletado en el editor
+Los módulos estándar no hay que escribirlos, se descargan de la fuente. Dos sitios:
 
-Cada `device/init/<feature>/<módulo>.schema.json` es un JSON Schema real (tipos, `enum` de identities derivadas —p.ej. los ~300 valores válidos de `type` en interfaces—, `required`, `default`). Con la extensión `redhat.vscode-yaml` (recomendada en `.vscode/extensions.json`) y el mapeo en `.vscode/settings.json` (`yaml.schemas`), VS Code sugiere claves y valores al editar `interfaces.yaml`/`interfaces.example.yaml`. Si abres el archivo suelto sin la carpeta del repo como workspace, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados también lo activa por su cuenta.
+- **IETF/IANA** (`ietf-*`, `iana-*`): mirror [`YangModels/yang`](https://github.com/YangModels/yang), en `standard/ietf/RFC/` y `standard/iana/`. El nombre de fichero lleva la revisión, p.ej. `ietf-interfaces@2014-05-08.yang` (RFC 7223).
+- **OpenConfig** (`openconfig-*`): repo oficial [`openconfig/public`](https://github.com/openconfig/public), en `release/models/<área>/`.
+
+Ejemplo real, así se trajo `device/yang/interfaz/`:
+
+```bash
+mkdir -p device/yang/interfaz && cd device/yang/interfaz
+BASE="https://raw.githubusercontent.com/YangModels/yang/main/standard"
+curl -fsSL -o ietf-interfaces.yang "$BASE/ietf/RFC/ietf-interfaces%402014-05-08.yang"
+curl -fsSL -o ietf-yang-types.yang "$BASE/ietf/RFC/ietf-yang-types%402013-07-15.yang"
+curl -fsSL -o ietf-inet-types.yang "$BASE/ietf/RFC/ietf-inet-types%402013-07-15.yang"
+curl -fsSL -o ietf-ip.yang        "$BASE/ietf/RFC/ietf-ip%402018-02-22.yang"
+curl -fsSL -o iana-if-type.yang   "$BASE/iana/iana-if-type%402021-06-21.yang"
+```
+
+Cada `.yang` declara sus `import` al principio (`grep -n "^  import" *.yang`) — así sabes qué más te falta descargar. Repite hasta que no falte nada; `uv run --with pyang python3 -c "..."` (o directamente el paso 3) te avisa con un error de pyang si falta algún módulo.
+
+### 3. Genera el ejemplo y el schema
+
+```bash
+uv run --with pyang python3 scripts/generate_config.py
+```
+
+Sin argumentos: recorre **todas** las subcarpetas de `device/yang/` (no hace falta decirle cuál) y por cada una que tenga nodos de configuración en la raíz escribe en `device/init/<feature>/`:
+
+- `<módulo>.example.yaml` — esqueleto con una clave por nodo, `null` de placeholder (o el `default` del YANG si lo tiene), y un comentario con el tipo/si es obligatorio.
+- `<módulo>.schema.json` — el JSON Schema de ese mismo árbol, con los `enum` ya resueltos (identities derivadas incluidas, p.ej. los ~300 valores válidos de `type` en interfaces salen de cruzar `ietf-interfaces` con las identities de `iana-if-type`).
+
+Solo sobreescribe esos dos ficheros generados — nunca toca el `<módulo>.yaml` real editado a mano, así que se puede correr después de cada cambio en `device/yang/` sin miedo a perder nada.
+
+### 4. Rellena el YAML real con autocompletado
+
+Copia `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez (ese es el que carga `sysrepocfg` en el primer arranque, ver `device/init/yaml_to_json.py` y `device/entrypoint.py:load_seed`) y edítalo con VS Code:
+
+1. Instala la extensión `redhat.vscode-yaml` (ya recomendada en `.vscode/extensions.json`).
+2. Abre la carpeta del repo como workspace — `.vscode/settings.json` ya mapea `interfaces.yaml`/`interfaces.example.yaml` a su `schema.json` vía `yaml.schemas`. Si en vez de eso abres el archivo suelto, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados activa el mismo autocompletado sin depender del workspace.
+3. `Ctrl+Espacio` en cualquier valor te sugiere lo que el YANG permite ahí — enums, booleanos, los `enum` de identities, etc.
+
+### 5. Conéctalo al contenedor (opcional)
+
+Los pasos 1-4 dejan el modelo listo para editar, pero **no hacen nada dentro del lab todavía** — eso es aparte, y es justo el estado en el que están `ietf-system` y `openconfig-platform` ahora mismo (ver la sección siguiente). Para que sirva datos de verdad:
+
+1. En `device/entrypoint.py`, añade un `sysrepoctl -i` idempotente para el módulo principal en `install_modules()` (a menos que netopeer2/sysrepo ya lo traiga instalado de fábrica — revisa `sysrepoctl -l` dentro del contenedor).
+2. Si hay seed inicial, añade un `load_seed("<módulo>", "<feature>/<módulo>.yaml")` en `seed_datastores()`.
+3. Implementa callbacks en `device/netconf_lab/` para los nodos `config false`, RPCs o acciones que quieras servir de verdad (mira `device/netconf_lab/interfaces/` como ejemplo de un módulo sí conectado).
+4. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
 
 ## Modelos YANG preparados pero no conectados
 
@@ -172,42 +210,6 @@ Dos detalles a tener en cuenta si los retomas:
 ```
 
 La prueba levanta el laboratorio y verifica lectura de la config, creación/activación de una interfaz y estado operacional.
-
-## Estructura
-
-```text
-.
-├── compose.yml                  # desarrollo: build local de device/
-├── compose.prod.yml             # producción: pull de ghcr.io/nonetss/netconf-lab
-├── .github/workflows/
-│   └── docker-build.yml         # smoke test + publish a GHCR en push a main
-├── device
-│   ├── Dockerfile
-│   ├── entrypoint.py
-│   ├── netconf_lab/
-│   │   ├── __main__.py          # bootstrap: loop, señales, conexión sysrepo
-│   │   ├── logging_conf.py
-│   │   ├── state.py             # uptime/boot-time compartido
-│   │   ├── subscriptions.py     # cableado sess.subscribe_* (solo ietf-interfaces)
-│   │   └── interfaces/          # todo ietf-interfaces
-│   │       ├── kernel.py        # reconciliación con el Linux del contenedor
-│   │       └── oper.py
-│   ├── init/
-│   │   ├── interfaz/
-│   │   │   ├── interfaces.yaml          # seed real, cargado en el primer arranque
-│   │   │   ├── interfaces.example.yaml  # generado, solo de referencia
-│   │   │   └── interfaces.schema.json   # generado, para autocompletado
-│   │   ├── sistema/       # generado, sin conectar (ver más abajo)
-│   │   ├── plataforma/    # generado, sin conectar (ver más abajo)
-│   │   └── yaml_to_json.py                # convierte el YAML de arriba a JSON para sysrepocfg
-│   └── yang/
-│       ├── interfaz/      # ietf-interfaces + ietf-ip + iana-if-type + tipos (conectado)
-│       ├── sistema/       # ietf-system + ietf-netconf-acm + tipos (sin conectar)
-│       └── plataforma/    # openconfig-platform + dependencias (sin conectar)
-├── scripts/
-│   ├── generate_config.py       # device/yang/<feature>/ -> device/init/<feature>/*.example.yaml + *.schema.json
-│   └── smoke-test.sh
-```
 
 ## Base técnica
 
