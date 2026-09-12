@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=./interfaces.schema.json
 "ietf-interfaces:interfaces":
   interface:
-    - name: eth0 # string
+    - name: "eth0" # string
       description: "Ethernet interface" # string
       type: "iana-if-type:ethernetCsmacd" # identityref base interface-type, mandatory
       enabled: true # boolean
@@ -11,9 +11,26 @@
         forwarding: false # boolean
         mtu: 1500 # uint16
         address:
-          - ip: 10.1.1.10 # inet:ipv4-address-no-zone
+          - ip: "10.1.1.10" # inet:ipv4-address-no-zone
             prefix-length: 24 # uint8
-            netmask: 255.255.255.0 # yang:dotted-quad, if-feature ipv4-non-contiguous-netmasks
+            netmask: "255.255.255.0" # yang:dotted-quad, if-feature ipv4-non-contiguous-netmasks
         neighbor:
-          - ip: 10.1.1.1 # inet:ipv4-address-no-zone
-            link-layer-address: 00:11:22:33:44:55 # yang:phys-address, mandatory
+          - ip: "10.1.1.1" # inet:ipv4-address-no-zone
+            link-layer-address: "00:11:22:33:44:55" # yang:phys-address, mandatory
+      "ietf-ip:ipv6":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint32
+        address:
+          - ip: "2001:db8::1" # inet:ipv6-address-no-zone
+            prefix-length: 64 # uint8, mandatory
+        neighbor:
+          - ip: "2001:db8::2" # inet:ipv6-address-no-zone
+            link-layer-address: "00:11:22:33:44:55" # yang:phys-address, mandatory
+        dup-addr-detect-transmits: 1 # uint32
+        autoconf:
+          create-global-addresses: true # boolean
+          create-temporary-addresses: false # boolean, if-feature ipv6-privacy-autoconf
+          temporary-valid-lifetime: 604800 # uint32, if-feature ipv6-privacy-autoconf
+          temporary-preferred-lifetime: 86400 # uint32, if-feature ipv6-privacy-autoconf
+      "sandbox-if-ext:mac-address": "00:00:11:11:22:22" # yang:mac-address
