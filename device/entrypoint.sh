@@ -50,7 +50,7 @@ cleanup() {
   wait || true
 }
 trap cleanup TERM INT EXIT
-python3 -m device_plugin &
+python3 -m netconf_lab &
 plugin_pid=$!
 netopeer2-server -d -v2 &
 server_pid=$!

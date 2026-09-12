@@ -141,7 +141,7 @@ docker compose up --build -d
 1. Copia el `.yang` a `device/yang/`.
 2. Añade en `device/entrypoint.sh` un `sysrepoctl -i` idempotente.
 3. Añade datos iniciales XML en `device/init/` si son necesarios.
-4. Implementa callbacks en `device/device_plugin/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
+4. Implementa callbacks en `device/netconf_lab/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
 5. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
 
 ## Prueba automática
@@ -160,7 +160,7 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 ├── device
 │   ├── Dockerfile
 │   ├── entrypoint.sh
-│   ├── device_plugin/
+│   ├── netconf_lab/
 │   │   ├── __main__.py          # bootstrap: loop, señales, conexión sysrepo
 │   │   ├── logging_conf.py
 │   │   ├── state.py             # uptime/boot-time compartido
