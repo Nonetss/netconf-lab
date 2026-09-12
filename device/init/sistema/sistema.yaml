@@ -1,87 +1,87 @@
 # yaml-language-server: $schema=./sistema.schema.json
 "ietf-netconf-acm:nacm":
-  enable-nacm: true  # boolean
-  read-default: permit  # action-type
-  write-default: deny  # action-type
-  exec-default: permit  # action-type
-  enable-external-groups: true  # boolean
+  enable-nacm: true # boolean
+  read-default: permit # action-type
+  write-default: deny # action-type
+  exec-default: permit # action-type
+  enable-external-groups: true # boolean
   groups:
     group:
-    - name: admins  # group-name-type
-      user-name: [root]  # leaf-list, user-name-type
-    - name: operators  # group-name-type
-      user-name: [ops]  # leaf-list, user-name-type
+      - name: admins # group-name-type
+        user-name: [root] # leaf-list, user-name-type
+      - name: operators # group-name-type
+        user-name: [ops] # leaf-list, user-name-type
   rule-list:
-  - name: admin-rules  # string
-    group: [admins]  # leaf-list, union
-    rule:
-    - name: allow-all  # string
-      module-name: "*"  # union
-      path: /  # node-instance-identifier, mandatory
-      access-operations: "*"  # union
-      action: permit  # action-type, mandatory
-      comment: Full access for admins  # string
-  - name: operator-rules  # string
-    group: [operators]  # leaf-list, union
-    rule:
-    - name: allow-read  # string
-      module-name: "*"  # union
-      path: /  # node-instance-identifier, mandatory
-      access-operations: read  # union
-      action: permit  # action-type, mandatory
-      comment: Read-only access for operators  # string
-    - name: deny-write  # string
-      module-name: "*"  # union
-      path: /  # node-instance-identifier, mandatory
-      access-operations: write  # union
-      action: deny  # action-type, mandatory
-      comment: No write access for operators  # string
+    - name: admin-rules # string
+      group: [admins] # leaf-list, union
+      rule:
+        - name: allow-all # string
+          module-name: "*" # union
+          path: / # node-instance-identifier, mandatory
+          access-operations: "*" # union
+          action: permit # action-type, mandatory
+          comment: Full access for admins # string
+    - name: operator-rules # string
+      group: [operators] # leaf-list, union
+      rule:
+        - name: allow-read # string
+          module-name: "*" # union
+          path: / # node-instance-identifier, mandatory
+          access-operations: read # union
+          action: permit # action-type, mandatory
+          comment: Read-only access for operators # string
+        - name: deny-write # string
+          module-name: "*" # union
+          path: / # node-instance-identifier, mandatory
+          access-operations: write # union
+          action: deny # action-type, mandatory
+          comment: No write access for operators # string
 "ietf-system:system":
-  contact: netconf-lab@example.org  # string
-  hostname: router-zrh-01  # inet:domain-name
-  location: Lab ZRH - Docker container  # string
+  contact: netconf-lab@example.org # string
+  hostname: router-zrh-01 # inet:domain-name
+  location: Lab ZRH - Docker container # string
   clock:
-    timezone-name: Europe/Zurich  # timezone-name
+    timezone-name: Europe/Zurich # timezone-name
   ntp:
-    enabled: true  # boolean
+    enabled: true # boolean
     server:
-    - name: pool.ntp.org  # string
-      udp:
-        address: 127.0.0.1  # inet:host, mandatory
-        port: "123"  # inet:port-number, if-feature ntp-udp-port
-      association-type: server  # enumeration, enum: server|peer|pool
-      iburst: true  # boolean
-      prefer: true  # boolean
+      - name: pool.ntp.org # string
+        udp:
+          address: 127.0.0.1 # inet:host, mandatory
+          port: "123" # inet:port-number, if-feature ntp-udp-port
+        association-type: server # enumeration, enum: server|peer|pool
+        iburst: true # boolean
+        prefer: true # boolean
   dns-resolver:
-    search: [example.org]  # leaf-list, inet:domain-name
+    search: [example.org] # leaf-list, inet:domain-name
     server:
-    - name: resolver-1  # string
-      udp-and-tcp:
-        address: 127.0.0.1  # inet:ip-address, mandatory
-        port: "53"  # inet:port-number, if-feature dns-udp-tcp-port
+      - name: resolver-1 # string
+        udp-and-tcp:
+          address: 127.0.0.1 # inet:ip-address, mandatory
+          port: "53" # inet:port-number, if-feature dns-udp-tcp-port
     options:
-      timeout: 5  # uint8
-      attempts: 2  # uint8
+      timeout: 5 # uint8
+      attempts: 2 # uint8
   radius:
     server:
-    - name: radius-1  # string
-      udp:
-        address: 127.0.0.1  # inet:host, mandatory
-        authentication-port: "1812"  # inet:port-number
-        shared-secret: lab-shared-secret  # string, mandatory
-      authentication-type: ietf-system:radius-pap  # identityref base radius-authentication-type
+      - name: radius-1 # string
+        udp:
+          address: 127.0.0.1 # inet:host, mandatory
+          authentication-port: "1812" # inet:port-number
+          shared-secret: lab-shared-secret # string, mandatory
+        authentication-type: ietf-system:radius-pap # identityref base radius-authentication-type
     options:
-      timeout: 5  # uint8
-      attempts: 2  # uint8
+      timeout: 5 # uint8
+      attempts: 2 # uint8
   authentication:
-    user-authentication-order: [ietf-system:local-users]  # leaf-list, identityref base authentication-method
+    user-authentication-order: [ietf-system:local-users] # leaf-list, identityref base authentication-method
     user:
-    - name: root  # string
-      password: "$6$lab$rounds=2000$..."  # ianach:crypt-hash
-      authorized-key:
-      - name: lab-key  # string
-        algorithm: ssh-rsa  # string, mandatory
-        key-data: AAAAB3NzaC1yc2EAAAADAQABAAABAQ...  # binary, mandatory
-    - name: ops  # string
-      password: "$6$lab$rounds=2000$..."  # ianach:crypt-hash
-      authorized-key: []
+      - name: root # string
+        password: "$6$lab$rounds=2000$..." # ianach:crypt-hash
+        authorized-key:
+          - name: lab-key # string
+            algorithm: ssh-rsa # string, mandatory
+            key-data: AAAAB3NzaC1yc2EAAAADAQABAAABAQ... # binary, mandatory
+      - name: ops # string
+        password: "$6$lab$rounds=2000$..." # ianach:crypt-hash
+        authorized-key: []
