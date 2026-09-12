@@ -6,7 +6,7 @@ Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket q
 
 ## Para qué sirve
 
-Un target NETCONF real (config + estado + RPCs sobre datastores de verdad) contra el que probar cosas sin tocar hardware ni un router de producción:
+Un target NETCONF real (config + estado sobre datastores de verdad) contra el que probar cosas sin tocar hardware ni un router de producción:
 
 - Aprender o enseñar NETCONF/YANG con `netopeer2-cli` o cualquier cliente, sin depender de acceso a un dispositivo físico.
 - Desarrollar y probar clientes/automatización NETCONF (scripts propios, colecciones Ansible, gateways RESTCONF, etc.) contra un servidor que reacciona de verdad — crear o activar una interfaz mueve una interfaz `dummy` real dentro del contenedor.
@@ -156,14 +156,14 @@ Cada `device/init/<feature>/<módulo>.schema.json` es un JSON Schema real (tipos
 
 `device/yang/sistema/` (`ietf-system`, RFC 7317) y `device/yang/plataforma/` (`openconfig-platform`) ya están en el repo con sus dependencias completas, y `scripts/generate_config.py` les genera `device/init/sistema/sistema.example.yaml` y `device/init/plataforma/openconfig-platform.example.yaml` con schema para autocompletar. Pero **ninguno de los dos hace nada todavía dentro del lab**:
 
-- `device/entrypoint.py` no los instala con `sysrepoctl -i` (solo instala `iana-if-type`, `sandbox-device` y `sandbox-if-ext`).
+- `device/entrypoint.py` no los instala con `sysrepoctl -i` (el único módulo propio que instala ahora es `iana-if-type`).
 - No hay ningún seed cargado para ellos en `seed_datastores()`.
 - No hay callbacks en `device/netconf_lab/` sirviendo su estado operacional ni sus RPCs.
 
 Dos detalles a tener en cuenta si los retomas:
 
 - `sistema.example.yaml` mezcla **dos** módulos porque `ietf-system` importa `ietf-netconf-acm` (para anotar el leaf `password` como sensible) y ese módulo trae su propio árbol de configuración (`nacm:`) — el generador lo vuelca también, aunque no lo hayas pedido.
-- `openconfig-platform.example.yaml` es casi todo huecos: el modelo es mayormente `config false` (el inventario de componentes lo publica el propio dispositivo), así que el "ejemplo editable" no aporta gran cosa hasta que haya un callback de datos operacionales detrás — sería el reemplazo natural del inventario virtual actual que vive en `sandbox-device`.
+- `openconfig-platform.example.yaml` es casi todo huecos: el modelo es mayormente `config false` (el inventario de componentes lo publica el propio dispositivo), así que el "ejemplo editable" no aporta gran cosa hasta que haya un callback de datos operacionales detrás.
 
 ## Prueba automática
 
@@ -171,7 +171,7 @@ Dos detalles a tener en cuenta si los retomas:
 ./scripts/smoke-test.sh
 ```
 
-La prueba levanta el laboratorio y verifica lectura, edición, estado de interfaz y RPC.
+La prueba levanta el laboratorio y verifica lectura de la config, creación/activación de una interfaz y estado operacional.
 
 ## Estructura
 
@@ -188,21 +188,22 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 │   │   ├── __main__.py          # bootstrap: loop, señales, conexión sysrepo
 │   │   ├── logging_conf.py
 │   │   ├── state.py             # uptime/boot-time compartido
-│   │   ├── subscriptions.py     # cableado sess.subscribe_*
-│   │   ├── interfaces/          # todo ietf-interfaces
-│   │   │   ├── kernel.py        # reconciliación con el Linux del contenedor
-│   │   │   └── oper.py
-│   │   └── system/              # todo sandbox-device
-│   │       ├── oper.py
-│   │       └── rpc.py
+│   │   ├── subscriptions.py     # cableado sess.subscribe_* (solo ietf-interfaces)
+│   │   └── interfaces/          # todo ietf-interfaces
+│   │       ├── kernel.py        # reconciliación con el Linux del contenedor
+│   │       └── oper.py
 │   ├── init/
 │   │   ├── interfaz/
 │   │   │   ├── interfaces.yaml          # seed real, cargado en el primer arranque
 │   │   │   ├── interfaces.example.yaml  # generado, solo de referencia
 │   │   │   └── interfaces.schema.json   # generado, para autocompletado
-│   │   └── yaml_to_json.py      # convierte el YAML de arriba a JSON para sysrepocfg
+│   │   ├── sistema/       # generado, sin conectar (ver más abajo)
+│   │   ├── plataforma/    # generado, sin conectar (ver más abajo)
+│   │   └── yaml_to_json.py                # convierte el YAML de arriba a JSON para sysrepocfg
 │   └── yang/
-│       └── interfaz/            # ietf-interfaces + ietf-ip + iana-if-type + tipos
+│       ├── interfaz/      # ietf-interfaces + ietf-ip + iana-if-type + tipos (conectado)
+│       ├── sistema/       # ietf-system + ietf-netconf-acm + tipos (sin conectar)
+│       └── plataforma/    # openconfig-platform + dependencias (sin conectar)
 ├── scripts/
 │   ├── generate_config.py       # device/yang/<feature>/ -> device/init/<feature>/*.example.yaml + *.schema.json
 │   └── smoke-test.sh
