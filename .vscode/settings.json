@@ -38,6 +38,14 @@
     "editor.defaultFormatter": "PrateekMahendrakar.prettyxml",
     "editor.formatOnSave": true
   },
+  "[yaml]": {
+    "editor.wordBasedSuggestions": "off",
+    "editor.suggest.showWords": false
+  },
+  "yaml.completion": true,
+  "yaml.validate": true,
+  "yaml.hover": true,
+  "yaml.schemaStore.enable": false,
   "yaml.schemas": {
     "./device/init/interfaz/interfaces.schema.json": [
       "device/init/interfaz/interfaces.yaml",
