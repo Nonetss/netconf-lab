@@ -33,4 +33,3 @@
           create-temporary-addresses: false # boolean, if-feature ipv6-privacy-autoconf
           temporary-valid-lifetime: 604800 # uint32, if-feature ipv6-privacy-autoconf
           temporary-preferred-lifetime: 86400 # uint32, if-feature ipv6-privacy-autoconf
-      "sandbox-if-ext:mac-address": "00:00:11:11:22:22" # yang:mac-address
