@@ -1,0 +1,32 @@
+name: netconf-sandbox
+services:
+  device:
+    build:
+      context: ./device
+      args:
+        NETOPEER2_IMAGE: ${NETOPEER2_IMAGE:-sysrepo/netopeer2@sha256:efc408c392a2970f211227ba3a79fe157281e3d2914b8c4298095e6be4f4fe91}
+    image: netconf-sandbox-device:local
+    platform: linux/amd64
+    container_name: netconf-device
+    hostname: router-lab-01
+    restart: unless-stopped
+    ports:
+      - "${NETCONF_PORT:-830}:830"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - sysrepo-data:/etc/sysrepo
+    networks:
+      management:
+        aliases: [router-lab-01]
+    healthcheck:
+      test: ["CMD-SHELL", "ss -ltn | grep -qE ':830[[:space:]]'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+volumes:
+  sysrepo-data:
+networks:
+  management:
+    driver: bridge

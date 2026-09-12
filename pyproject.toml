@@ -1,0 +1,17 @@
+[project]
+name = "netconf-lab"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Nonete", email = "amorenolopezbarajas@pm.me" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+netconf-lab = "netconf_lab:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
