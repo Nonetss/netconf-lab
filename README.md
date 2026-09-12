@@ -68,26 +68,16 @@ Por ahora el laboratorio sólo levanta el contenedor `device`; no hay un cliente
 NETCONF dedicado. Puedes ejercitar el datastore directamente con `sysrepocfg`
 dentro del contenedor:
 
-> Los comandos de `sandbox-device` (`system`, `ping`, estado operacional) dependen de que `device/init/system.yaml` exista al primer arranque — `device/entrypoint.py:seed_datastores` lo carga sin comprobar que esté ahí. Si no existe, el contenedor falla al arrancar sobre un volumen limpio. Revisa que el archivo esté presente antes de un `docker compose down -v` + `up`.
-
 ```bash
 # Running config de interfaces
 docker compose exec device sysrepocfg -X -d running -m ietf-interfaces -f xml
 
-# Cambiar hostname
-echo '<system xmlns="urn:sandbox:device"><hostname>router-zrh-01</hostname></system>' \
-  | docker compose exec -T device sysrepocfg --edit -d running -m sandbox-device -f xml
-
-# Activar ge1; el cambio llega a la interfaz Linux dummy
-echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface><name>ge1</name><enabled>true</enabled></interface></interfaces>' \
+# Crear/activar una interfaz nueva; el cambio llega a la interfaz Linux dummy
+echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface><name>ge1</name><type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type><enabled>true</enabled></interface></interfaces>' \
   | docker compose exec -T device sysrepocfg --edit -d running -m ietf-interfaces -f xml
 
-# Ejecutar el RPC YANG ping
-echo '<ping xmlns="urn:sandbox:device"><destination>127.0.0.1</destination><count>3</count></ping>' \
-  | docker compose exec -T device sysrepocfg --rpc -f xml
-
-# Estado operacional completo
-docker compose exec device sysrepocfg -X -d operational -m sandbox-device -f xml
+# Estado operacional de interfaces
+docker compose exec device sysrepocfg -X -d operational -m ietf-interfaces -f xml
 ```
 
 `scripts/smoke-test.sh` automatiza estos mismos pasos.
@@ -111,25 +101,6 @@ También puedes abrir la sesión NETCONF cruda (te pedirá `netconf`):
 ```bash
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
   -p 830 root@localhost -s netconf
-```
-
-## RPC manual
-
-Desde `netopeer2-cli`, invoca `user-rpc` y pega:
-
-```xml
-<ping xmlns="urn:sandbox:device">
-  <destination>127.0.0.1</destination>
-  <count>3</count>
-</ping>
-```
-
-Para simular un reinicio lógico y reiniciar el uptime:
-
-```xml
-<reboot xmlns="urn:sandbox:device">
-  <delay-seconds>0</delay-seconds>
-</reboot>
 ```
 
 ## Inspección local
