@@ -29,3 +29,53 @@
         dup-addr-detect-transmits: 1 # uint32
         autoconf:
           create-global-addresses: true # boolean
+    - name: "dummy0" # string
+      description: "Dummy interface 0" # string
+      type: "iana-if-type:propVirtual" # identityref base interface-type, mandatory
+      enabled: true # boolean
+      link-up-down-trap-enable: "enabled" # enumeration, if-feature if-mib, enum: enabled|disabled
+      "ietf-ip:ipv4":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1400 # uint16
+        address:
+          - ip: "10.2.1.10" # inet:ipv4-address-no-zone
+            prefix-length: 24 # uint8
+      "ietf-ip:ipv6":
+        enabled: false # boolean
+        forwarding: false # boolean
+        mtu: 1400 # uint32
+        autoconf:
+          create-global-addresses: false # boolean
+    - name: "dummy1" # string
+      description: "Dummy interface 1 (IPv6 only)" # string
+      type: "iana-if-type:propVirtual" # identityref base interface-type, mandatory
+      enabled: true # boolean
+      "ietf-ip:ipv4":
+        enabled: false # boolean
+        forwarding: false # boolean
+      "ietf-ip:ipv6":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint32
+        address:
+          - ip: "2001:db8:10::1" # inet:ipv6-address-no-zone
+            prefix-length: 64 # uint8, mandatory
+        dup-addr-detect-transmits: 1 # uint32
+        autoconf:
+          create-global-addresses: true # boolean
+    - name: "mgmt0" # string
+      description: "Management interface" # string
+      type: "iana-if-type:propVirtual" # identityref base interface-type, mandatory
+      enabled: true # boolean
+      link-up-down-trap-enable: "disabled" # enumeration, if-feature if-mib, enum: enabled|disabled
+      "ietf-ip:ipv4":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint16
+        address:
+          - ip: "192.168.50.10" # inet:ipv4-address-no-zone
+            prefix-length: 24 # uint8
+        neighbor:
+          - ip: "192.168.50.1" # inet:ipv4-address-no-zone
+            link-layer-address: "aa:bb:cc:dd:ee:ff" # yang:phys-address, mandatory
