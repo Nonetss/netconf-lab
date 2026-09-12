@@ -18,7 +18,12 @@ Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket q
 
 ## Arranque rápido
 
-Requisitos: Docker Engine/Desktop con Compose v2. La imagen base publicada es `linux/amd64`; Compose fija esa plataforma, por lo que en Apple Silicon/ARM se ejecutará mediante emulación.
+Requisitos: Docker Engine/Desktop con Compose v2. `sysrepo/netopeer2` sólo publica build `linux/amd64` (no hay `arm64` oficial ni un fork de terceros en el que confiar); `compose.yaml` fija esa plataforma explícitamente, así que en un host ARM se ejecuta vía emulación QEMU en vez de nativo.
+
+- **Docker Desktop (macOS Apple Silicon, Windows on ARM):** la emulación viene integrada, no hace falta nada más.
+- **Linux arm64:** instala soporte binfmt una vez por host: `docker run --privileged --rm tonistiigi/binfmt --install all`.
+
+Será notablemente más lento que en amd64 nativo por la emulación.
 
 ```bash
 cp .env.example .env
@@ -136,7 +141,7 @@ docker compose up --build -d
 1. Copia el `.yang` a `device/yang/`.
 2. Añade en `device/entrypoint.sh` un `sysrepoctl -i` idempotente.
 3. Añade datos iniciales XML en `device/init/` si son necesarios.
-4. Implementa callbacks en `device/app/device_plugin.py` para nodos `config false`, RPCs o acciones.
+4. Implementa callbacks en `device/device_plugin/` para nodos `config false` (`interfaces/oper.py`, `system/oper.py`), RPCs (`system/rpc.py`) o acciones.
 5. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
 
 ## Prueba automática
@@ -155,7 +160,17 @@ La prueba levanta el laboratorio y verifica lectura, edición, estado de interfa
 ├── device
 │   ├── Dockerfile
 │   ├── entrypoint.sh
-│   ├── app/device_plugin.py
+│   ├── device_plugin/
+│   │   ├── __main__.py          # bootstrap: loop, señales, conexión sysrepo
+│   │   ├── logging_conf.py
+│   │   ├── state.py             # uptime/boot-time compartido
+│   │   ├── subscriptions.py     # cableado sess.subscribe_*
+│   │   ├── interfaces/          # todo ietf-interfaces
+│   │   │   ├── kernel.py        # reconciliación con el Linux del contenedor
+│   │   │   └── oper.py
+│   │   └── system/              # todo sandbox-device
+│   │       ├── oper.py
+│   │       └── rpc.py
 │   ├── init/interfaces.xml
 │   ├── init/system.xml
 │   └── yang/sandbox-device.yang
