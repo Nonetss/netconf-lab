@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=./openconfig-platform.schema.json
+"openconfig-platform:components":
+  component:
+  - name: chassis-0  # leafref
+    config:
+      name: chassis-0  # string
+    properties:
+      property:
+      - name: serial-number  # leafref
+        config:
+          name: serial-number  # string
+          value: LAB-20260912-001  # union
+      - name: description  # leafref
+        config:
+          name: description  # string
+          value: Virtual chassis  # union
+    subcomponents:
+      subcomponent:
+      - name: routing-engine-0  # leafref
+        config:
+          name: routing-engine-0  # leafref
+      - name: fan-0  # leafref
+        config:
+          name: fan-0  # leafref
+      - name: psu-0  # leafref
+        config:
+          name: psu-0  # leafref
+    chassis:
+      config: {}
+      utilization:
+        resources:
+          resource:
+          - name: cpu  # leafref
+            config:
+              name: cpu  # string
+              used-threshold-upper: "90"  # oc-types:percentage
+              used-threshold-upper-clear: "80"  # oc-types:percentage
+  - name: routing-engine-0  # leafref
+    config:
+      name: routing-engine-0  # string
+    properties:
+      property:
+      - name: serial-number  # leafref
+        config:
+          name: serial-number  # string
+          value: RE-0001  # union
+      - name: description  # leafref
+        config:
+          name: description  # string
+          value: Virtual control plane  # union
+    subcomponents:
+      subcomponent:
+      - name: chassis-0  # leafref
+        config:
+          name: chassis-0  # leafref
+    controller-card:
+      config: {}
+  - name: fan-0  # leafref
+    config:
+      name: fan-0  # string
+    properties:
+      property:
+      - name: serial-number  # leafref
+        config:
+          name: serial-number  # string
+          value: FAN-0001  # union
+      - name: description  # leafref
+        config:
+          name: description  # string
+          value: Virtual cooling  # union
+    subcomponents:
+      subcomponent:
+      - name: chassis-0  # leafref
+        config:
+          name: chassis-0  # leafref
+    fan:
+      config: {}
+  - name: psu-0  # leafref
+    config:
+      name: psu-0  # string
+    properties:
+      property:
+      - name: serial-number  # leafref
+        config:
+          name: serial-number  # string
+          value: PSU-0001  # union
+      - name: description  # leafref
+        config:
+          name: description  # string
+          value: Virtual power supply  # union
+    subcomponents:
+      subcomponent:
+      - name: chassis-0  # leafref
+        config:
+          name: chassis-0  # leafref
+    power-supply:
+      config: {}

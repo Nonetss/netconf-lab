@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=./openconfig-platform.schema.json
+"openconfig-platform:components":
+  component:
+  - name: null  # leafref
+    config:
+      name: null  # string
+    properties:
+      property:
+      - name: null  # leafref
+        config:
+          name: null  # string
+          value: null  # union
+    subcomponents:
+      subcomponent:
+      - name: null  # leafref
+        config:
+          name: null  # leafref
+    chassis:
+      config:
+      utilization:
+        resources:
+          resource:
+          - name: null  # leafref
+            config:
+              name: null  # string
+              used-threshold-upper: null  # oc-types:percentage
+              used-threshold-upper-clear: null  # oc-types:percentage
+    port:
+      config:
+    power-supply:
+      config:
+    fan:
+      config:
+    fabric:
+      config:
+    storage:
+      config:
+    cpu:
+      config:
+    integrated-circuit:
+      config:
+      utilization:
+        resources:
+          resource:
+          - name: null  # leafref
+            config:
+              name: null  # string
+              used-threshold-upper: null  # oc-types:percentage
+              used-threshold-upper-clear: null  # oc-types:percentage
+    backplane:
+      config:
+    software-module:
+      config:
+    controller-card:
+      config:
+    boot-loader:
+      config:
