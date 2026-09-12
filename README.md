@@ -1,6 +1,8 @@
 # Sandbox NETCONF con Docker Compose
 
-Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip`, un modelo `sandbox-device`, estado operacional dinámico y RPCs.
+Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG, `ietf-interfaces` + `ietf-ip` (interfaces reales, reconciliadas contra el Linux del contenedor), un modelo propio `sandbox-device` (sistema, inventario, RPCs), estado operacional dinámico y RPCs.
+
+> `ietf-system` y `openconfig-platform` están **preparados como YANG de referencia** (`device/yang/sistema/`, `device/yang/plataforma/`) con su YAML de ejemplo y JSON Schema generados, pero **todavía no están conectados** al contenedor — no se instalan en `entrypoint.py` ni tienen callbacks en `device/netconf_lab/`. Ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
 
 ## Para qué sirve
 
@@ -15,11 +17,11 @@ Un target NETCONF real (config + estado + RPCs sobre datastores de verdad) contr
 
 - NETCONF sobre SSH en TCP/830.
 - Datastores `running`, `startup` y `candidate`.
-- Interfaces `ge0`, `ge1` y `lo0` configurables con `ietf-interfaces`/`ietf-ip`.
-- Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU y direcciones IPv4 se reconcilian desde la configuración YANG.
+- Interfaces configurables con `ietf-interfaces`/`ietf-ip` (`device/init/interfaz/interfaces.yaml` trae una interfaz `eth0` de ejemplo — el nombre y los datos son tuyos, edítalos).
+- Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU, MAC (vía el augment propio `sandbox-if-ext:mac-address`) y direcciones IPv4 se reconcilian desde la configuración YANG.
 - Estado operacional: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
-- Sistema: hostname, ubicación, versión, serial, uptime, CPU y memoria.
-- Inventario virtual de chasis, control plane, ventilador y fuente.
+- Sistema (`sandbox-device`, propio): hostname, ubicación, versión, serial, uptime, CPU y memoria.
+- Inventario virtual de chasis, control plane, ventilador y fuente (`sandbox-device`, propio).
 - RPCs de laboratorio: `ping` y `reboot` simulado.
 - Persistencia del datastore en un volumen Docker.
 
@@ -66,6 +68,8 @@ Es exactamente el mismo servicio (puerto, volumen `sysrepo-data`, red, healthche
 Por ahora el laboratorio sólo levanta el contenedor `device`; no hay un cliente
 NETCONF dedicado. Puedes ejercitar el datastore directamente con `sysrepocfg`
 dentro del contenedor:
+
+> Los comandos de `sandbox-device` (`system`, `ping`, estado operacional) dependen de que `device/init/system.yaml` exista al primer arranque — `device/entrypoint.py:seed_datastores` lo carga sin comprobar que esté ahí. Si no existe, el contenedor falla al arrancar sobre un volumen limpio. Revisa que el archivo esté presente antes de un `docker compose down -v` + `up`.
 
 ```bash
 # Running config de interfaces
@@ -177,6 +181,19 @@ Convención: cada feature vive en su propia carpeta `device/yang/<feature>/`, co
 ### Autocompletado en el editor
 
 Cada `device/init/<feature>/<módulo>.schema.json` es un JSON Schema real (tipos, `enum` de identities derivadas —p.ej. los ~300 valores válidos de `type` en interfaces—, `required`, `default`). Con la extensión `redhat.vscode-yaml` (recomendada en `.vscode/extensions.json`) y el mapeo en `.vscode/settings.json` (`yaml.schemas`), VS Code sugiere claves y valores al editar `interfaces.yaml`/`interfaces.example.yaml`. Si abres el archivo suelto sin la carpeta del repo como workspace, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados también lo activa por su cuenta.
+
+## Modelos YANG preparados pero no conectados
+
+`device/yang/sistema/` (`ietf-system`, RFC 7317) y `device/yang/plataforma/` (`openconfig-platform`) ya están en el repo con sus dependencias completas, y `scripts/generate_config.py` les genera `device/init/sistema/sistema.example.yaml` y `device/init/plataforma/openconfig-platform.example.yaml` con schema para autocompletar. Pero **ninguno de los dos hace nada todavía dentro del lab**:
+
+- `device/entrypoint.py` no los instala con `sysrepoctl -i` (solo instala `iana-if-type`, `sandbox-device` y `sandbox-if-ext`).
+- No hay ningún seed cargado para ellos en `seed_datastores()`.
+- No hay callbacks en `device/netconf_lab/` sirviendo su estado operacional ni sus RPCs.
+
+Dos detalles a tener en cuenta si los retomas:
+
+- `sistema.example.yaml` mezcla **dos** módulos porque `ietf-system` importa `ietf-netconf-acm` (para anotar el leaf `password` como sensible) y ese módulo trae su propio árbol de configuración (`nacm:`) — el generador lo vuelca también, aunque no lo hayas pedido.
+- `openconfig-platform.example.yaml` es casi todo huecos: el modelo es mayormente `config false` (el inventario de componentes lo publica el propio dispositivo), así que el "ejemplo editable" no aporta gran cosa hasta que haya un callback de datos operacionales detrás — sería el reemplazo natural del inventario virtual actual que vive en `sandbox-device`.
 
 ## Prueba automática
 
