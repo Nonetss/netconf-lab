@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from .interfaces.oper import interface_oper_data
+from .system.oper import components_state_oper_data, system_state_oper_data
 
 
 async def module_change_cb(event, req_id, changes, private_data):
@@ -22,6 +23,21 @@ def register(sess, conn):
         "ietf-interfaces",
         "/ietf-interfaces:interfaces/interface",
         interface_oper_data,
+        private_data=conn,
+        asyncio_register=True,
+        strict=True,
+    )
+    sess.subscribe_oper_data_request(
+        "ietf-system",
+        "/ietf-system:system-state",
+        system_state_oper_data,
+        asyncio_register=True,
+        strict=True,
+    )
+    sess.subscribe_oper_data_request(
+        "openconfig-platform",
+        "/openconfig-platform:components/component",
+        components_state_oper_data,
         private_data=conn,
         asyncio_register=True,
         strict=True,
