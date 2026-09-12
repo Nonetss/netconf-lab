@@ -58,7 +58,7 @@
       - name: resolver-1 # string
         udp-and-tcp:
           address: 127.0.0.1 # inet:ip-address, mandatory
-          port: "53" # inet:port-number, if-feature dns-udp-tcp-port
+          port: 53 # inet:port-number, if-feature dns-udp-tcp-port
     options:
       timeout: 5 # uint8
       attempts: 2 # uint8
@@ -67,7 +67,7 @@
       - name: radius-1 # string
         udp:
           address: 127.0.0.1 # inet:host, mandatory
-          authentication-port: "1812" # inet:port-number
+          authentication-port: 1812 # inet:port-number
           shared-secret: lab-shared-secret # string, mandatory
         authentication-type: ietf-system:radius-pap # identityref base radius-authentication-type
     options:
