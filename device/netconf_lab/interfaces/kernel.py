@@ -42,10 +42,6 @@ def reconcile_kernel(conn):
         exists = run("ip", "link", "show", "dev", name, check=False).returncode == 0
         if not exists:
             run("ip", "link", "add", name, "type", "dummy")
-        mac = find_key(interface, "mac-address")
-        if mac:
-            run("ip", "link", "set", "dev", name, "down")
-            run("ip", "link", "set", "dev", name, "address", mac)
         ipv4 = find_key(interface, "ipv4", {}) or {}
         mtu = ipv4.get("mtu")
         if mtu:
