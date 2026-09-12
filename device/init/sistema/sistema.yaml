@@ -48,7 +48,7 @@
       - name: pool.ntp.org # string
         udp:
           address: 127.0.0.1 # inet:host, mandatory
-          port: "123" # inet:port-number, if-feature ntp-udp-port
+          port: 123 # inet:port-number, if-feature ntp-udp-port
         association-type: server # enumeration, enum: server|peer|pool
         iburst: true # boolean
         prefer: true # boolean

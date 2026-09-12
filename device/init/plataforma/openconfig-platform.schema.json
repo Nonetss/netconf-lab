@@ -109,10 +109,10 @@
                                       "type": "string"
                                     },
                                     "used-threshold-upper": {
-                                      "type": "string"
+                                      "type": "integer"
                                     },
                                     "used-threshold-upper-clear": {
-                                      "type": "string"
+                                      "type": "integer"
                                     }
                                   },
                                   "additionalProperties": false
@@ -225,10 +225,10 @@
                                       "type": "string"
                                     },
                                     "used-threshold-upper": {
-                                      "type": "string"
+                                      "type": "integer"
                                     },
                                     "used-threshold-upper-clear": {
-                                      "type": "string"
+                                      "type": "integer"
                                     }
                                   },
                                   "additionalProperties": false

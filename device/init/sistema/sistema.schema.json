@@ -12,14 +12,26 @@
         },
         "read-default": {
           "type": "string",
+          "enum": [
+            "permit",
+            "deny"
+          ],
           "default": "permit"
         },
         "write-default": {
           "type": "string",
+          "enum": [
+            "permit",
+            "deny"
+          ],
           "default": "deny"
         },
         "exec-default": {
           "type": "string",
+          "enum": [
+            "permit",
+            "deny"
+          ],
           "default": "permit"
         },
         "enable-external-groups": {
@@ -92,6 +104,10 @@
                     },
                     "action": {
                       "type": "string",
+                      "enum": [
+                        "permit",
+                        "deny"
+                      ],
                       "description": "mandatory"
                     },
                     "comment": {
@@ -158,8 +174,8 @@
                         "description": "mandatory"
                       },
                       "port": {
-                        "type": "string",
-                        "default": "123",
+                        "type": "integer",
+                        "default": 123,
                         "description": "requires feature 'ntp-udp-port'"
                       }
                     },
@@ -217,8 +233,8 @@
                         "description": "mandatory"
                       },
                       "port": {
-                        "type": "string",
-                        "default": "53",
+                        "type": "integer",
+                        "default": 53,
                         "description": "requires feature 'dns-udp-tcp-port'"
                       }
                     },
@@ -267,8 +283,8 @@
                         "description": "mandatory"
                       },
                       "authentication-port": {
-                        "type": "string",
-                        "default": "1812"
+                        "type": "integer",
+                        "default": 1812
                       },
                       "shared-secret": {
                         "type": "string",

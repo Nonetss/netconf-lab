@@ -174,18 +174,37 @@ def build_yaml(ctx, schema_filename):
 # --- JSON Schema ---------------------------------------------------------
 
 
+INTEGER_TYPES = ("int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64")
+
+
+def resolve_type_chain(type_stmt):
+    """Sigue la cadena de typedefs (i_typedef, ya resuelto por pyang tras
+    ctx.validate()) hasta el tipo builtin final. inet:port-number,
+    oc-types:percentage, etc. son typedefs sobre uint16/uint8 -- sin esto
+    salen como "string" en el schema, lo cual invita a poner comillas en el
+    YAML y eso revienta sysrepocfg (numero no puede venir como string)."""
+    current = type_stmt
+    while True:
+        typedef = getattr(current, "i_typedef", None)
+        if typedef is None:
+            return current.arg, current
+        current = typedef.search_one("type")
+
+
 def leaf_schema(node, identities):
     type_stmt = node.search_one("type")
-    type_name = type_stmt.arg if type_stmt else "string"
+    if type_stmt is None:
+        return {"type": "string"}
+    builtin, terminal = resolve_type_chain(type_stmt)
 
-    if type_name == "boolean":
+    if builtin == "boolean":
         schema = {"type": "boolean"}
-    elif type_name in ("int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"):
+    elif builtin in INTEGER_TYPES:
         schema = {"type": "integer"}
-    elif type_name == "enumeration":
-        schema = {"type": "string", "enum": [e.arg for e in type_stmt.search("enum")]}
-    elif type_name == "identityref":
-        base_stmt = type_stmt.search_one("base")
+    elif builtin == "enumeration":
+        schema = {"type": "string", "enum": [e.arg for e in terminal.search("enum")]}
+    elif builtin == "identityref":
+        base_stmt = terminal.search_one("base") or type_stmt.search_one("base")
         base_name = strip_prefix(base_stmt.arg) if base_stmt else None
         values = []
         if base_name:
