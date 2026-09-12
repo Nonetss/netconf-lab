@@ -14,15 +14,17 @@ docker compose up --build -d
 
 ## Arquitectura
 
-- `device/entrypoint.py`: arranca netopeer2-server, instala módulos YANG que falten (`install_modules()`) y siembra la config inicial la primera vez (`seed_datastores()`, con un flag en `/etc/sysrepo/.sandbox-initialized`).
-- `device/netconf_lab/`: plugin Python (proceso separado, corre junto a `netopeer2-server`) que se conecta a Sysrepo y sirve callbacks:
+- `device/entrypoint.py`: arranca netopeer2-server, instala módulos YANG e inicializa la config, **de forma genérica** (nada de nombres de módulo hardcodeados salvo `iana-if-type`, que necesita venir de un path fijo del propio paquete sysrepo):
+  - `install_modules()` → `install_feature_modules()`: recorre `device/yang/<feature>/*.yang`; por cada módulo que `sysrepoctl -l` no conozca todavía, lo instala con `sysrepoctl -i <fichero> -s <carpeta-feature> -e '*' ...` (todas las features activadas). Si el módulo ya existe (netopeer2/sysrepo trae varios de fábrica, a veces en otra revisión), lo salta.
+  - `seed_datastores()` (solo la primera vez, flag en `/etc/sysrepo/.sandbox-initialized`): recorre `device/init/<feature>/*.yaml` (nunca `*.example.yaml`), convierte cada uno a JSON y lo aplica con `sysrepocfg --edit` **sin `-m`** (el JSON ya lleva sus claves cualificadas por módulo, así que un fichero puede tocar varios módulos a la vez, p.ej. `sistema.yaml` trae `ietf-system` + `ietf-netconf-acm`).
+- `device/netconf_lab/`: plugin Python (proceso separado, corre junto a `netopeer2-server`) que se conecta a Sysrepo y sirve callbacks — **esto sí es manual, no genérico**:
   - `subscriptions.py` cablea `subscribe_module_change` / `subscribe_oper_data_request` / `subscribe_rpc_call`.
   - `interfaces/kernel.py` reconcilia la config `ietf-interfaces`/`ietf-ip` contra interfaces Linux `dummy` reales del contenedor (`ip link`/`ip address`).
   - `interfaces/oper.py` sirve el estado operacional (`oper-status`, MAC, contadores...) leyendo `ip -j -s link`.
-- `device/init/<feature>/<módulo>.yaml`: seed de config real, convertido a JSON (`yaml_to_json.py`) y cargado con `sysrepocfg` en el primer arranque.
+- `device/init/<feature>/<módulo>.yaml`: seed de config real, convertido a JSON (`yaml_to_json.py`).
 - `device/yang/<feature>/`: los `.yang` fuente, agrupados por feature (ver convención abajo).
 
-Hoy **solo `ietf-interfaces`/`ietf-ip` está conectado de verdad** (instalado + sembrado + con callbacks). `ietf-system` y `openconfig-platform` están en el repo como YANG + ejemplo generado, pero sin instalar ni callbacks — ver "Modelos YANG preparados pero no conectados" en `README.md`.
+Instalación + seed de config es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/` (hoy: `ietf-interfaces`/`ietf-ip`, `ietf-system`, `openconfig-platform`, todos instalados y sembrados). Lo que sigue siendo manual, módulo por módulo, son los callbacks de `device/netconf_lab/` — hoy solo existen para `ietf-interfaces`. `ietf-system` y `openconfig-platform` sirven lo que haya en `running` (lo sembrado) pero no tienen RPCs ni estado operacional dinámico.
 
 ## Convención: una carpeta por feature en `device/yang/`
 
@@ -53,7 +55,9 @@ uv run --with pyang python3 scripts/generate_config.py
 
 Solo sobreescribe esos dos ficheros generados — **nunca toca `<módulo>.yaml`** (el real, editado a mano), así que se puede correr después de cualquier cambio en `device/yang/` sin miedo a perder ediciones. `pyang` se usa vía `uv run --with pyang`, nunca como dependencia persistente del proyecto (no lo añadas a `pyproject.toml`/`uv.lock`) — asegúrate de usar `use_env=False` en `repository.FileRepository` si tocas `scripts/generate_config.py`, porque `pyang` por defecto también busca en `sys.prefix/share/yang/modules` y eso puede colar una revisión distinta de un módulo que ya tienes localmente.
 
-Flujo completo después de generar: copiar `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez, rellenarlo (con autocompletado, ver abajo), y si quieres que sirva datos reales: instalarlo en `install_modules()`, sembrarlo en `seed_datastores()` (`device/entrypoint.py`), e implementar los callbacks que haga falta en `device/netconf_lab/`.
+Flujo completo después de generar: copiar `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez, rellenarlo (con autocompletado, ver abajo), y `docker compose down -v && docker compose up --build -d`. La instalación del módulo y la siembra del seed son automáticas (ver "Arquitectura" arriba) — no hay que tocar `entrypoint.py`. Solo hace falta código en `device/netconf_lab/` si quieres RPCs o estado operacional (`config false`) de verdad, no solo la config sembrada.
+
+**Cuidado con los tipos numéricos vía typedef** (`inet:port-number`, `oc-types:percentage`...): en el YAML van sin comillas (`port: 123`, no `port: "123"`). El generador ya sigue la cadena de `typedef` hasta el tipo builtin (`resolve_type_chain()` en `scripts/generate_config.py`) para que el JSON Schema los marque como `integer`, pero si el editor o alguien los cita a mano, `sysrepocfg --edit` falla al arrancar el contenedor con un error de "invalid ... value" en vez de fallar silenciosamente.
 
 ## Autocompletado en el editor
 

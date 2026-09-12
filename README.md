@@ -1,8 +1,8 @@
 # Sandbox NETCONF con Docker Compose
 
-Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip` (interfaces reales, reconciliadas contra el Linux del contenedor).
+Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip`, `ietf-system`, `openconfig-platform` (RFC de IETF/IANA y OpenConfig, nada propio).
 
-> `ietf-system` y `openconfig-platform` están **preparados como YANG de referencia** (`device/yang/sistema/`, `device/yang/plataforma/`) con su YAML de ejemplo y JSON Schema generados, pero **todavía no están conectados** al contenedor — no se instalan en `entrypoint.py` ni tienen callbacks en `device/netconf_lab/`. Hoy el lab solo sirve `ietf-interfaces` de verdad. Ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
+> `device/entrypoint.py` instala y siembra **cualquier cosa** que metas en `device/yang/<feature>/` + `device/init/<feature>/<módulo>.yaml` de forma genérica, sin tocar código — ver [Añadir modelos YANG](#añadir-modelos-yang). Lo único que sigue siendo manual es implementar callbacks Python para estado operacional (`config false`) o RPCs; hoy eso solo existe para `ietf-interfaces` (ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado)).
 
 ## Para qué sirve
 
@@ -20,9 +20,11 @@ Un target NETCONF real (config + estado sobre datastores de verdad) contra el qu
 - Interfaces configurables con `ietf-interfaces`/`ietf-ip` (`device/init/interfaz/interfaces.yaml` trae una interfaz `eth0` de ejemplo — el nombre y los datos son tuyos, edítalos).
 - Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU y direcciones IPv4 se reconcilian desde la configuración YANG.
 - Estado operacional de interfaz: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
+- Config de sistema (`ietf-system`): hostname, ubicación, NTP, DNS, RADIUS, usuarios/claves SSH — sembrada, sirve datos reales por `sysrepocfg`/NETCONF.
+- Inventario de chasis (`openconfig-platform`): chasis, control plane, ventilador, fuente, con propiedades y sub-componentes — también sembrado y consultable.
 - Persistencia del datastore en un volumen Docker.
 
-Sistema, inventario de chasis y RPCs de laboratorio (`ping`/`reboot`) **no están implementados ahora mismo** — existían en un modelo propio (`sandbox-device`) que se quitó del proyecto porque solo se quieren modelos estándar aquí. `ietf-system` y `openconfig-platform` son el camino previsto para recuperar esas dos primeras piezas; ver [Modelos YANG preparados pero no conectados](#modelos-yang-preparados-pero-no-conectados).
+Lo que **no** hay todavía: RPCs (`ietf-system` trae `set-current-datetime`, `system-restart`... definidos en el YANG pero sin callback Python que los ejecute) y estado operacional dinámico fuera de interfaces (p.ej. uptime real de `ietf-system`, o que el inventario de `openconfig-platform` refleje algo más que lo sembrado). Eso requiere código en `device/netconf_lab/`, no solo YANG + seed — ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado).
 
 > La configuración sólo altera interfaces `dummy` del contenedor. No configura las interfaces del host ni reenvía tráfico como un router real.
 
@@ -78,6 +80,12 @@ echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface
 
 # Estado operacional de interfaces
 docker compose exec device sysrepocfg -X -d operational -m ietf-interfaces -f xml
+
+# Config de sistema (hostname, NTP, DNS...), sembrada desde device/init/sistema/sistema.yaml
+docker compose exec device sysrepocfg -X -d running -m ietf-system -f xml
+
+# Inventario de chasis, sembrado desde device/init/plataforma/openconfig-platform.yaml
+docker compose exec device sysrepocfg -X -d running -m openconfig-platform -f xml
 ```
 
 `scripts/smoke-test.sh` automatiza estos mismos pasos.
@@ -181,27 +189,23 @@ Copia `<módulo>.example.yaml` a `<módulo>.yaml` la primera vez (ese es el que 
 2. Abre la carpeta del repo como workspace — `.vscode/settings.json` ya mapea `interfaces.yaml`/`interfaces.example.yaml` a su `schema.json` vía `yaml.schemas`. Si en vez de eso abres el archivo suelto, la cabecera `# yaml-language-server: $schema=./<módulo>.schema.json` que llevan los `.example.yaml` generados activa el mismo autocompletado sin depender del workspace.
 3. `Ctrl+Espacio` en cualquier valor te sugiere lo que el YANG permite ahí — enums, booleanos, los `enum` de identities, etc.
 
-### 5. Conéctalo al contenedor (opcional)
+### 5. El contenedor lo instala y siembra solo
 
-Los pasos 1-4 dejan el modelo listo para editar, pero **no hacen nada dentro del lab todavía** — eso es aparte, y es justo el estado en el que están `ietf-system` y `openconfig-platform` ahora mismo (ver la sección siguiente). Para que sirva datos de verdad:
+`device/entrypoint.py` recorre `device/yang/` y `device/init/` en cada arranque, de forma genérica (no hay lista de módulos hardcodeada):
 
-1. En `device/entrypoint.py`, añade un `sysrepoctl -i` idempotente para el módulo principal en `install_modules()` (a menos que netopeer2/sysrepo ya lo traiga instalado de fábrica — revisa `sysrepoctl -l` dentro del contenedor).
-2. Si hay seed inicial, añade un `load_seed("<módulo>", "<feature>/<módulo>.yaml")` en `seed_datastores()`.
-3. Implementa callbacks en `device/netconf_lab/` para los nodos `config false`, RPCs o acciones que quieras servir de verdad (mira `device/netconf_lab/interfaces/` como ejemplo de un módulo sí conectado).
-4. Reconstruye y reinicia el volumen si cambió el esquema: `docker compose down -v && docker compose up --build -d`.
+- **`install_modules()`**: por cada `.yang` de cada `device/yang/<feature>/` que `sysrepoctl -l` no conozca todavía, lo instala (`sysrepoctl -i <fichero> -s <carpeta-feature> -e '*' ...`, con **todas** las features del módulo activadas). Si netopeer2/sysrepo ya trae ese módulo de fábrica (pasa con `ietf-interfaces`, `ietf-ip`, `ietf-netconf-acm`...) lo detecta por nombre y no lo reinstala — así que tu copia local en `device/yang/` puede ir a una revisión distinta sin conflicto, solo se usa para las herramientas de `scripts/`.
+- **`seed_datastores()`** (solo en el primer arranque, con volumen limpio): por cada `<feature>/<módulo>.yaml` bajo `device/init/` (nunca los `.example.yaml`), lo convierte a JSON y lo aplica con `sysrepocfg --edit` sin `-m` — el propio JSON ya lleva sus claves cualificadas por módulo (`"ietf-system:system":`, etc.), así que un fichero puede tocar más de un módulo a la vez sin que haga falta decírselo.
 
-## Modelos YANG preparados pero no conectados
+En la práctica: crea la carpeta, copia el `.example.yaml` a `<módulo>.yaml`, rellénalo, y `docker compose down -v && docker compose up --build -d` — sin tocar `entrypoint.py` para nada, a menos que quieras servir estado operacional o RPCs de verdad (ver siguiente sección).
 
-`device/yang/sistema/` (`ietf-system`, RFC 7317) y `device/yang/plataforma/` (`openconfig-platform`) ya están en el repo con sus dependencias completas, y `scripts/generate_config.py` les genera `device/init/sistema/sistema.example.yaml` y `device/init/plataforma/openconfig-platform.example.yaml` con schema para autocompletar. Pero **ninguno de los dos hace nada todavía dentro del lab**:
+## Qué está de verdad conectado
 
-- `device/entrypoint.py` no los instala con `sysrepoctl -i` (el único módulo propio que instala ahora es `iana-if-type`).
-- No hay ningún seed cargado para ellos en `seed_datastores()`.
-- No hay callbacks en `device/netconf_lab/` sirviendo su estado operacional ni sus RPCs.
+La instalación + seed de config (paso 5 de arriba) es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/`. Lo que **no** es genérico — porque no hay forma de que lo sea sin más contexto sobre qué quieres simular — son los callbacks Python en `device/netconf_lab/` para nodos `config false` (estado operacional) y RPCs. Hoy eso solo existe para `ietf-interfaces` (`device/netconf_lab/interfaces/`: reconcilia contra interfaces Linux `dummy` reales, sirve `oper-status`/MAC/contadores). `ietf-system` (RPCs `set-current-datetime`, `system-restart`...; estado `platform`/`clock`) y `openconfig-platform` (inventario dinámico en vez de solo lo sembrado) no tienen callback — sus RPCs no responden y su estado operacional es lo que haya en `running`, nada más.
 
-Dos detalles a tener en cuenta si los retomas:
+Un par de detalles del seed real de este repo si tocas `device/init/sistema/sistema.yaml` o `device/init/plataforma/openconfig-platform.yaml`:
 
-- `sistema.example.yaml` mezcla **dos** módulos porque `ietf-system` importa `ietf-netconf-acm` (para anotar el leaf `password` como sensible) y ese módulo trae su propio árbol de configuración (`nacm:`) — el generador lo vuelca también, aunque no lo hayas pedido.
-- `openconfig-platform.example.yaml` es casi todo huecos: el modelo es mayormente `config false` (el inventario de componentes lo publica el propio dispositivo), así que el "ejemplo editable" no aporta gran cosa hasta que haya un callback de datos operacionales detrás.
+- `sistema.yaml` mezcla **dos** módulos porque `ietf-system` importa `ietf-netconf-acm` (para anotar el leaf `password` como sensible) y ese módulo trae su propio árbol de configuración (`nacm:`) — el generador lo vuelca también en el mismo `.example.yaml`, aunque no lo hayas pedido. El NACM sembrado aquí es real y activo (controla quién puede hacer qué por NETCONF) — no es solo un adorno.
+- Cuidado con los tipos que son `typedef` sobre un número (`inet:port-number`, `oc-types:percentage`...): tienen que ir sin comillas en el YAML (`port: 123`, no `port: "123"`) — si tu editor los cita, `sysrepocfg` falla al arrancar con "no matching subtype" o similar. El JSON Schema generado ya los tipa como `integer` para que el autocompletado no te empuje a citarlos.
 
 ## Prueba automática
 
