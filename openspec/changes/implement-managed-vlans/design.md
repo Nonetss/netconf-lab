@@ -5,7 +5,7 @@ El dispositivo instala módulos y semillas desde directorios por feature y el pl
 ## Goals / Non-Goals
 
 **Goals:**
-- Incorporar `openconfig-vlan`, `openconfig-network-instance` y sus dependencias oficiales, anunciándolos como capacidades NETCONF.
+- Incorporar `ieee802-dot1q-bridge`, `ieee802-dot1q-types`, `ieee802-types` y sus dependencias IETF, anunciándolos como capacidades NETCONF.
 - Unificar la reconciliación de interfaces y VLANs en un plano de datos Linux reproducible, con bridge filtering 802.1Q.
 - Validar semántica access/trunk, eliminación y aislamiento en una prueba automatizada, además de exponer estado operacional.
 
@@ -16,11 +16,11 @@ El dispositivo instala módulos y semillas desde directorios por feature y el pl
 
 ## Decisions
 
-### Usar OpenConfig VLAN y Network Instance como contrato VLAN
+### Usar IEEE 802.1Q Bridge como contrato VLAN
 
-Se descargarán `openconfig-vlan`, `openconfig-network-instance` y sus imports oficiales. `openconfig-vlan` expresa las VLANs y los modos access/trunk; `openconfig-network-instance` proporciona el árbol raíz donde se configuran los dominios VLAN L2. El proyecto instalará todas las dependencias requeridas por el modelo, aunque no active ni implemente sus funcionalidades de routing.
+Se instalarán los módulos oficiales `ieee802-dot1q-bridge`, `ieee802-dot1q-types` e `ieee802-types`, junto con una copia aislada de las dependencias IETF de interfaces. `bridge-port` aporta la asociación y PVID del puerto; `filtering-database/vlan-registration-entry/port-map` representa las membresías y si cada transmisión es etiquetada o sin etiqueta.
 
-Se descartan un módulo propio, uno específico de fabricante y el modelo IEEE 802.1Q Bridge: los dos primeros reducen portabilidad y el último publica la pertenencia VLAN como datos operacionales, no como configuración NETCONF editable.
+Se descartan módulos propios, específicos de fabricante y OpenConfig VLAN/network-instance. El modelo IEEE contiene configuración NETCONF editable para bridge ports, PVID y VLAN Registration Entries.
 
 ### Representar la conmutación mediante un bridge Linux con VLAN filtering
 
@@ -30,7 +30,7 @@ Esta elección usa el forwarding 802.1Q real del kernel y preserva aislamiento s
 
 ### Validar referencias antes de aplicar cambios al kernel
 
-La suscripción de cambios validará que cada pertenencia haga referencia a una VLAN existente y que los puertos protegidos no reciban configuración conmutada. Un cambio inválido será rechazado durante la validación de Sysrepo; un cambio válido se aplicará en el evento de cambio y se revertirá con la transacción si falla el kernel.
+La reconciliación valida que los `port-ref` apunten a bridge ports administrados, que el PVID figure en su port-map y que su entrada sea `untagged`; los puertos protegidos no reciben configuración conmutada. El laboratorio numera port-ref desde 1 ordenando los nombres de los bridge ports para mantener una asignación reproducible.
 
 La alternativa de ignorar membresías inválidas deja `running` divergente del plano de datos y no cumple la atomicidad esperada de una operación NETCONF.
 

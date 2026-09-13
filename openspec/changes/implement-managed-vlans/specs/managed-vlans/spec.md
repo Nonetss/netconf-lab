@@ -1,34 +1,34 @@
 ## Purpose
 
-Permitir que el laboratorio simule un dispositivo Ethernet gestionado con VLANs 802.1Q, puertos access y trunk, y estado operacional consultable por NETCONF.
+Permitir que el laboratorio simule un dispositivo Ethernet gestionado con VLANs IEEE 802.1Q y estado operacional consultable por NETCONF.
 
 ## ADDED Requirements
 
 ### Requirement: Configuración de VLANs estándar
-El dispositivo SHALL exponer la configuración de VLAN mediante los modelos YANG OpenConfig estándar instalados en el dispositivo. SHALL admitir una VLAN con identificador entre 1 y 4094, nombre y estado administrativo, y rechazará una configuración que no satisfaga las restricciones del modelo.
+El dispositivo SHALL exponer la configuración mediante `ieee802-dot1q-bridge`, con un bridge cliente VLAN, componente C-VLAN, `bridge-port`/PVID y `filtering-database/vlan-registration-entry/port-map`. SHALL rechazar VIDs fuera de 1..4094 para el plano de datos Linux.
 
 #### Scenario: Creación de una VLAN habilitada
-- **WHEN** un cliente NETCONF crea la VLAN 100 con nombre y estado habilitado
-- **THEN** la VLAN queda presente en `running` y `startup` con los valores configurados
+- **WHEN** un cliente NETCONF registra el VID 100 en un `vlan-registration-entry` estático
+- **THEN** la entrada queda presente en `running` y `startup`
 
 #### Scenario: Identificador de VLAN inválido
 - **WHEN** un cliente NETCONF intenta configurar un identificador fuera del rango admitido por el modelo
 - **THEN** la operación es rechazada sin modificar la configuración efectiva
 
 ### Requirement: Asignación de puertos VLAN
-El dispositivo SHALL permitir configurar en interfaces gestionables el modo `access` con una VLAN sin etiquetar, o el modo `trunk` con una VLAN nativa y una lista de VLANs etiquetadas. SHALL rechazar una pertenencia que haga referencia a una VLAN no configurada y SHALL impedir que una interfaz protegida se convierta en puerto VLAN.
+El dispositivo SHALL permitir configurar interfaces gestionables como `bridge-port`, asignar su PVID y registrar membresías en el `port-map`. Una entrada `vlan-transmitted: untagged` SHALL coincidir con el PVID; una entrada `tagged` SHALL transmitir el VID etiquetado. SHALL impedir que una interfaz protegida se convierta en puerto VLAN.
 
 #### Scenario: Puerto de acceso
-- **WHEN** un cliente asigna una interfaz dummy a la VLAN 100 en modo `access`
+- **WHEN** un cliente asigna el PVID 100 a una interfaz dummy y registra el VID 100 como `untagged`
 - **THEN** el tráfico no etiquetado recibido por ese puerto pertenece exclusivamente a la VLAN 100
 
 #### Scenario: Puerto troncal
-- **WHEN** un cliente asigna una interfaz dummy a un trunk con VLAN nativa 100 y VLAN permitida 200
+- **WHEN** un cliente asigna PVID 100 a una interfaz dummy y registra 100 como `untagged` y 200 como `tagged`
 - **THEN** el tráfico de la VLAN 100 se trata como no etiquetado en el puerto y el de la VLAN 200 como etiquetado
 
-#### Scenario: VLAN ausente
-- **WHEN** un cliente intenta asignar un puerto a una VLAN que no existe
-- **THEN** la transacción NETCONF es rechazada y la membresía anterior permanece sin cambios
+#### Scenario: PVID reservado
+- **WHEN** un cliente intenta configurar el PVID 4095
+- **THEN** la operación es rechazada sin modificar la configuración efectiva
 
 ### Requirement: Conmutación VLAN aislada
 El dispositivo SHALL aplicar las membresías configuradas para que los puertos de una misma VLAN puedan conmutar tráfico Ethernet entre sí y los puertos de VLANs distintas permanezcan aislados. SHALL retirar del plano de datos una membresía, una VLAN o un puerto que se elimine o se deshabilite.

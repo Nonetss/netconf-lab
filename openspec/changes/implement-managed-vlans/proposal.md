@@ -4,9 +4,9 @@ El laboratorio permite crear interfaces virtuales, pero no representa el comport
 
 ## What Changes
 
-- Añadir la capacidad de configurar VLANs IEEE 802.1Q mediante `openconfig-vlan` y `openconfig-network-instance`.
-- Modelar VLANs con su identificador, nombre, estado administrativo y puertos de acceso o troncales con sus membresías y VLAN nativa.
-- Reconciliar la configuración contra bridges, subinterfaces VLAN y filtrado VLAN de Linux dentro del contenedor, sin modificar `eth0` ni `lo` ni las interfaces del host.
+- Añadir la capacidad de configurar VLANs IEEE 802.1Q mediante `ieee802-dot1q-bridge`, sin modelos VLAN o network-instance OpenConfig.
+- Modelar el bridge, sus componentes y los puertos con `bridge-port`/PVID y `filtering-database/vlan-registration-entry/port-map`.
+- Reconciliar la configuración contra un bridge Linux con filtrado VLAN dentro del contenedor, sin modificar `eth0` ni `lo` ni las interfaces del host.
 - Publicar estado operacional de las VLANs y de sus membresías para verificar la configuración efectiva.
 - Sembrar una topología de ejemplo y ampliar la prueba de humo para validar aislamiento y configuración de VLAN.
 
@@ -20,7 +20,7 @@ El laboratorio permite crear interfaces virtuales, pero no representa el comport
 
 ## Impact
 
-- Nuevos módulos YANG OpenConfig y sus dependencias bajo `device/yang/`.
+- Nuevos módulos YANG IEEE 802.1Q y dependencias IETF aisladas bajo `device/yang/`.
 - Nuevas semillas y esquemas YAML bajo `device/init/`.
 - Plugin Python del dispositivo, especialmente la reconciliación y estado operacional de interfaces.
 - Dependencias de sistema de la imagen para bridge VLAN filtering e inspección de estado.
