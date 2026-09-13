@@ -65,7 +65,12 @@ async def reconcile_loop(conn, stop_event):
     while not stop_event.is_set():
         try:
             reconcile_kernel(conn)
+            # Las interfaces dummy se crean antes de vincularlas al bridge,
+            # incluso cuando ambas configuraciones llegan en la misma edición.
+            from ..vlan.kernel import reconcile_vlans
+
+            reconcile_vlans(conn)
         except Exception:
-            logging.exception("Error reconciliando interfaces Linux")
+            logging.exception("Error reconciliando interfaces o VLANs Linux")
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop_event.wait(), timeout=2)

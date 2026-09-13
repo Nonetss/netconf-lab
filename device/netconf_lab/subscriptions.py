@@ -3,11 +3,15 @@ import logging
 
 from .interfaces.oper import interface_oper_data
 from .system.oper import components_state_oper_data, system_state_oper_data
+from .vlan.kernel import validate_vlan_changes
+from .vlan.oper import vlan_oper_data
 
 
 async def module_change_cb(event, req_id, changes, private_data):
+    if event == "change" and private_data[0] == "vlan":
+        validate_vlan_changes(changes, private_data[1])
     if event == "done":
-        logging.info("Configuración aplicada en %s (request-id=%s)", private_data, req_id)
+        logging.info("Configuración aplicada en %s (request-id=%s)", private_data[0], req_id)
     await asyncio.sleep(0)
 
 
@@ -16,13 +20,29 @@ def register(sess, conn):
         "ietf-interfaces",
         None,
         module_change_cb,
-        private_data="ietf-interfaces",
+        private_data=("ietf-interfaces", conn),
         asyncio_register=True,
     )
+    for module in ("openconfig-interfaces", "openconfig-network-instance"):
+        sess.subscribe_module_change(
+            module,
+            None,
+            module_change_cb,
+            private_data=("vlan", conn),
+            asyncio_register=True,
+        )
     sess.subscribe_oper_data_request(
         "ietf-interfaces",
         "/ietf-interfaces:interfaces/interface",
         interface_oper_data,
+        private_data=conn,
+        asyncio_register=True,
+        strict=True,
+    )
+    sess.subscribe_oper_data_request(
+        "openconfig-network-instance",
+        "/openconfig-network-instance:network-instances/network-instance/vlans/vlan",
+        vlan_oper_data,
         private_data=conn,
         asyncio_register=True,
         strict=True,
