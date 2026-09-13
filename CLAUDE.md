@@ -18,13 +18,14 @@ docker compose up --build -d
   - `install_modules()` → `install_feature_modules()`: recorre `device/yang/<feature>/*.yang`; por cada módulo que `sysrepoctl -l` no conozca todavía, lo instala con `sysrepoctl -i <fichero> -s <carpeta-feature> -e '*' ...` (todas las features activadas). Si el módulo ya existe (netopeer2/sysrepo trae varios de fábrica, a veces en otra revisión), lo salta.
   - `seed_datastores()` (**en cada arranque**, no solo el primero): recorre `device/init/<feature>/*.yaml` (nunca `*.example.yaml`), convierte cada uno a JSON y lo aplica con `sysrepocfg --edit` **sin `-m`** (el JSON ya lleva sus claves cualificadas por módulo, así que un fichero puede tocar varios módulos a la vez, p.ej. `sistema.yaml` trae `ietf-system` + `ietf-netconf-acm`). Reaplicar siempre es deliberado: `sysrepo-data` sobrevive a un `--build` (solo `down -v` lo borra), y un flag de "ya inicializado" habría hecho que editar un `.yaml` y reconstruir la imagen nunca se notara — justo el bug que este lab tuvo. Un cambio hecho a mano por NETCONF en caliente se pierde en el siguiente arranque, a propósito: los ficheros en `device/init/` son la fuente de verdad.
 - `device/netconf_lab/`: plugin Python (proceso separado, corre junto a `netopeer2-server`) que se conecta a Sysrepo y sirve callbacks — **esto sí es manual, no genérico**:
-  - `subscriptions.py` cablea `subscribe_module_change` / `subscribe_oper_data_request` / `subscribe_rpc_call`.
+ - `subscriptions.py` cablea las suscripciones de cambio y los callbacks de datos operacionales para `ietf-interfaces`, `ietf-system` y `openconfig-platform`; no hay callbacks RPC registrados actualmente.
   - `interfaces/kernel.py` reconcilia la config `ietf-interfaces`/`ietf-ip` contra interfaces Linux `dummy` reales del contenedor (`ip link`/`ip address`).
   - `interfaces/oper.py` sirve el estado operacional (`oper-status`, MAC, contadores...) leyendo `ip -j -s link`.
+ - `system/oper.py` sirve `ietf-system:system-state` desde el sistema del contenedor y completa el estado de los componentes configurados de `openconfig-platform` con metadatos virtuales.
 - `device/init/<feature>/<módulo>.yaml`: seed de config real, convertido a JSON (`yaml_to_json.py`).
 - `device/yang/<feature>/`: los `.yang` fuente, agrupados por feature (ver convención abajo).
 
-Instalación + seed de config es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/` (hoy: `ietf-interfaces`/`ietf-ip`, `ietf-system`, `openconfig-platform`, todos instalados y sembrados). Lo que sigue siendo manual, módulo por módulo, son los callbacks de `device/netconf_lab/` — hoy solo existen para `ietf-interfaces`. `ietf-system` y `openconfig-platform` sirven lo que haya en `running` (lo sembrado) pero no tienen RPCs ni estado operacional dinámico.
+Instalación + seed de config es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/` (hoy: `ietf-interfaces`/`ietf-ip`, `ietf-system`, `openconfig-platform`, todos instalados y sembrados). Lo que sigue siendo manual, módulo por módulo, son los callbacks de `device/netconf_lab/`: `ietf-interfaces` reconcilia enlaces `dummy` y sirve su estado; `ietf-system` publica plataforma y relojes del contenedor; y `openconfig-platform` completa los componentes sembrados con estado virtual. No hay callbacks RPC.
 
 ## Convención: una carpeta por feature en `device/yang/`
 

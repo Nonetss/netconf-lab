@@ -2,7 +2,7 @@
 
 Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip`, `ietf-system`, `openconfig-platform` (RFC de IETF/IANA y OpenConfig, nada propio).
 
-> `device/entrypoint.py` instala y siembra **cualquier cosa** que metas en `device/yang/<feature>/` + `device/init/<feature>/<módulo>.yaml` de forma genérica, sin tocar código — ver [Añadir modelos YANG](#añadir-modelos-yang). Lo único que sigue siendo manual es implementar callbacks Python para estado operacional (`config false`) o RPCs; hoy eso solo existe para `ietf-interfaces` (ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado)).
+> `device/entrypoint.py` instala y siembra **cualquier cosa** que metas en `device/yang/<feature>/` + `device/init/<feature>/<módulo>.yaml` de forma genérica, sin tocar código — ver [Añadir modelos YANG](#añadir-modelos-yang). Los callbacks Python para estado operacional (`config false`) o RPCs siguen siendo manuales: hoy hay estado operacional para `ietf-interfaces`, `ietf-system` y `openconfig-platform`, pero no hay RPCs implementadas (ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado)).
 
 ## Para qué sirve
 
@@ -20,11 +20,11 @@ Un target NETCONF real (config + estado sobre datastores de verdad) contra el qu
 - Interfaces configurables con `ietf-interfaces`/`ietf-ip` (`device/init/interfaz/interfaces.yaml` trae una interfaz `eth0` de ejemplo — el nombre y los datos son tuyos, edítalos).
 - Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU y direcciones IPv4 se reconcilian desde la configuración YANG.
 - Estado operacional de interfaz: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
-- Config de sistema (`ietf-system`): hostname, ubicación, NTP, DNS, RADIUS, usuarios/claves SSH — sembrada, sirve datos reales por `sysrepocfg`/NETCONF.
-- Inventario de chasis (`openconfig-platform`): chasis, control plane, ventilador, fuente, con propiedades y sub-componentes — también sembrado y consultable.
+- Config de sistema (`ietf-system`): hostname, ubicación, NTP, DNS, RADIUS y usuarios/claves SSH sembrados; su estado operacional incluye plataforma, reloj actual y hora de arranque del contenedor.
+- Inventario de chasis (`openconfig-platform`): chasis, control plane, ventilador y fuente sembrados; su estado operacional completa cada componente con tipo, descripción e identificadores virtuales.
 - Persistencia del datastore en un volumen Docker.
 
-Lo que **no** hay todavía: RPCs (`ietf-system` trae `set-current-datetime`, `system-restart`... definidos en el YANG pero sin callback Python que los ejecute) y estado operacional dinámico fuera de interfaces (p.ej. uptime real de `ietf-system`, o que el inventario de `openconfig-platform` refleje algo más que lo sembrado). Eso requiere código en `device/netconf_lab/`, no solo YANG + seed — ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado).
+Lo que **no** hay todavía son RPCs: `ietf-system` trae `set-current-datetime`, `system-restart` y otras definidas en el YANG, pero no hay callbacks Python que las ejecuten. El estado operacional de sistema y plataforma no intenta simular telemetría completa del hardware: expone datos del contenedor y metadatos virtuales derivados de los componentes sembrados.
 
 > La configuración sólo altera interfaces `dummy` del contenedor. No configura las interfaces del host ni reenvía tráfico como un router real.
 
@@ -81,11 +81,13 @@ echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface
 # Estado operacional de interfaces
 docker compose exec device sysrepocfg -X -d operational -m ietf-interfaces -f xml
 
-# Config de sistema (hostname, NTP, DNS...), sembrada desde device/init/sistema/sistema.yaml
+# Config y estado operacional de sistema
 docker compose exec device sysrepocfg -X -d running -m ietf-system -f xml
+docker compose exec device sysrepocfg -X -d operational -m ietf-system -f xml
 
-# Inventario de chasis, sembrado desde device/init/plataforma/openconfig-platform.yaml
+# Config y estado operacional del inventario de chasis
 docker compose exec device sysrepocfg -X -d running -m openconfig-platform -f xml
+docker compose exec device sysrepocfg -X -d operational -m openconfig-platform -f xml
 ```
 
 `scripts/smoke-test.sh` automatiza estos mismos pasos.
@@ -200,7 +202,13 @@ En la práctica: crea la carpeta, copia el `.example.yaml` a `<módulo>.yaml`, r
 
 ## Qué está de verdad conectado
 
-La instalación + seed de config (paso 5 de arriba) es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/`. Lo que **no** es genérico — porque no hay forma de que lo sea sin más contexto sobre qué quieres simular — son los callbacks Python en `device/netconf_lab/` para nodos `config false` (estado operacional) y RPCs. Hoy eso solo existe para `ietf-interfaces` (`device/netconf_lab/interfaces/`: reconcilia contra interfaces Linux `dummy` reales, sirve `oper-status`/MAC/contadores). `ietf-system` (RPCs `set-current-datetime`, `system-restart`...; estado `platform`/`clock`) y `openconfig-platform` (inventario dinámico en vez de solo lo sembrado) no tienen callback — sus RPCs no responden y su estado operacional es lo que haya en `running`, nada más.
+La instalación + seed de config (paso 5 de arriba) es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/`. Lo que **no** es genérico — porque no hay forma de que lo sea sin más contexto sobre qué quieres simular — son los callbacks Python en `device/netconf_lab/` para nodos `config false` y RPCs:
+
+- `ietf-interfaces` reconcilia interfaces Linux `dummy` reales y sirve `oper-status`, MAC y contadores.
+- `ietf-system` sirve `system-state/platform` desde el contenedor, y las fechas actual y de arranque.
+- `openconfig-platform` genera el estado de los componentes configurados, incluyendo tipo y metadatos virtuales deterministas.
+
+No hay callbacks RPC: las operaciones definidas por `ietf-system`, como `set-current-datetime` y `system-restart`, no responden. El inventario de plataforma conserva como fuente los componentes sembrados; su callback añade metadatos, pero no descubre hardware real.
 
 Un par de detalles del seed real de este repo si tocas `device/init/sistema/sistema.yaml` o `device/init/plataforma/openconfig-platform.yaml`:
 
