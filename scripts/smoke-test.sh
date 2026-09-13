@@ -32,21 +32,21 @@ echo '--> estado operacional expone oper-status de la interfaz'
 sysrepocfg -X -d operational -m ietf-interfaces -f xml | tee /tmp/netconf-oper.xml >/dev/null
 grep -q 'oper-status' /tmp/netconf-oper.xml
 
-echo '--> seed VLAN crea bridge filtering y puertos access/trunk'
-sysrepocfg -X -d running -m openconfig-network-instance -f xml | tee /tmp/netconf-vlan-running.xml >/dev/null
-grep -q '<vlan-id>100</vlan-id>' /tmp/netconf-vlan-running.xml
-docker compose exec -T device ip -d link show netconf-vlan-br0 | grep -q 'vlan_filtering 1'
+echo '--> seed IEEE 802.1Q crea bridge filtering y puertos access/trunk'
+sysrepocfg -X -d running -m ieee802-dot1q-bridge -f xml | tee /tmp/netconf-vlan-running.xml >/dev/null
+grep -q '<vids>100</vids>' /tmp/netconf-vlan-running.xml
+docker compose exec -T device ip -d link show dev nc-vlan-br0 | grep -q 'vlan_filtering 1'
 docker compose exec -T device bridge vlan show dev dummy0 | grep -Eq '100.*PVID.*Egress Untagged'
 docker compose exec -T device bridge vlan show dev dummy1 | grep -q '200'
 
-echo '--> estado operacional VLAN expone las membresías efectivas'
-sysrepocfg -X -d operational -m openconfig-network-instance -f xml | tee /tmp/netconf-vlan-oper.xml >/dev/null
-grep -q '<interface>dummy0</interface>' /tmp/netconf-vlan-oper.xml
+echo '--> estado operacional IEEE expone las membresías efectivas'
+sysrepocfg -X -d operational -m ieee802-dot1q-bridge -f xml | tee /tmp/netconf-vlan-oper.xml >/dev/null
+grep -q '<egress-ports>dummy0</egress-ports>' /tmp/netconf-vlan-oper.xml
 
-echo '--> referencia a VLAN ausente es rechazada'
-if echo '<interfaces xmlns="http://openconfig.net/yang/interfaces"><interface><name>dummy0</name><config><name>dummy0</name></config><ethernet xmlns="http://openconfig.net/yang/interfaces/ethernet"><switched-vlan xmlns="http://openconfig.net/yang/vlan"><config><interface-mode>ACCESS</interface-mode><access-vlan>4094</access-vlan></config></switched-vlan></ethernet></interface></interfaces>' \
-  | sysrepocfg --edit -d running -m openconfig-interfaces -f xml; then
-  echo 'La referencia a una VLAN inexistente fue aceptada' >&2
+echo '--> el modelo IEEE rechaza un PVID reservado'
+if echo '<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"><interface><name>dummy0</name><bridge-port xmlns="urn:ieee:std:802.1Q:yang:ieee802-dot1q-bridge"><pvid>4095</pvid></bridge-port></interface></interfaces>' \
+  | sysrepocfg --edit -d running -m ietf-interfaces -f xml; then
+  echo 'El PVID reservado fue aceptado' >&2
   exit 1
 fi
 
@@ -62,7 +62,7 @@ docker compose exec -T device sh -ec '
   ip link add vlan-smoke-b type veth peer name vlan-smoke-b-peer
   ip link add vlan-smoke-c type veth peer name vlan-smoke-c-peer
   for port in vlan-smoke-a vlan-smoke-b vlan-smoke-c; do
-    ip link set "$port" master netconf-vlan-br0
+    ip link set "$port" master nc-vlan-br0
     bridge vlan del dev "$port" vid 1
     ip link set "$port" up
   done
