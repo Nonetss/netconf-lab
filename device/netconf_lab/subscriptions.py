@@ -23,14 +23,13 @@ def register(sess, conn):
         private_data=("ietf-interfaces", conn),
         asyncio_register=True,
     )
-    for module in ("openconfig-interfaces", "openconfig-network-instance"):
-        sess.subscribe_module_change(
-            module,
-            None,
-            module_change_cb,
-            private_data=("vlan", conn),
-            asyncio_register=True,
-        )
+    sess.subscribe_module_change(
+        "ieee802-dot1q-bridge",
+        None,
+        module_change_cb,
+        private_data=("vlan", conn),
+        asyncio_register=True,
+    )
     sess.subscribe_oper_data_request(
         "ietf-interfaces",
         "/ietf-interfaces:interfaces/interface",
@@ -40,8 +39,8 @@ def register(sess, conn):
         strict=True,
     )
     sess.subscribe_oper_data_request(
-        "openconfig-network-instance",
-        "/openconfig-network-instance:network-instances/network-instance/vlans/vlan",
+        "ieee802-dot1q-bridge",
+        "/ieee802-dot1q-bridge:bridges",
         vlan_oper_data,
         private_data=conn,
         asyncio_register=True,

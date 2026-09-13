@@ -1,7 +1,7 @@
 import json
 
-from ..interfaces.kernel import link_snapshot, run
-from .kernel import desired_vlan_ports
+from ..interfaces.kernel import run
+from .kernel import _bridge_configuration, _items, desired_vlan_ports
 
 
 def bridge_vlan_snapshot():
@@ -21,37 +21,41 @@ def bridge_vlan_snapshot():
 async def vlan_oper_data(xpath, private_data):
     conn = private_data
     vlans, desired_ports = desired_vlan_ports(conn)
-    links = link_snapshot()
     effective = bridge_vlan_snapshot()
-    instances = {}
-    for vlan in vlans.values():
-        instance = instances.setdefault(vlan["network_instance"], [])
-        members = []
-        for name, port in desired_ports.items():
-            if vlan["id"] not in port["members"]:
-                continue
-            link = links.get(name)
-            if name in effective.get(vlan["id"], set()) and link:
-                members.append({"state": {"interface": name}})
-            elif not link:
-                # El modelo no tiene un estado explícito por miembro; la ausencia
-                # queda visible al no publicar una membresía efectiva.
-                continue
-        instance.append(
-            {
-                "vlan-id": vlan["id"],
-                "state": {
-                    "vlan-id": vlan["id"],
-                    "name": vlan["name"],
-                    "status": "ACTIVE" if vlan["active"] else "SUSPENDED",
-                },
-                "members": {"member": members},
-            }
-        )
+    bridge = _bridge_configuration(conn)
+    if not bridge:
+        return {}
+    components = _items(bridge.get("component"))
+    component = components[0] if components else {}
+    component_name = component.get("name")
+    component_state = {
+        "name": component_name,
+        "ports": len(desired_ports),
+        "bridge-vlan": {
+            "max-vids": 4094,
+            "vlan": [
+                {
+                    "vid": vid,
+                    "egress-ports": sorted(effective.get(vid, set())),
+                    "untagged-ports": sorted(
+                        name
+                        for name, port in desired_ports.items()
+                        if port["native"] == vid and name in effective.get(vid, set())
+                    ),
+                }
+                for vid in sorted(vlans)
+            ],
+        },
+    }
     return {
-        "network-instances": {
-            "network-instance": [
-                {"name": name, "vlans": {"vlan": vlan_list}} for name, vlan_list in instances.items()
+        "bridges": {
+            "bridge": [
+                {
+                    "name": bridge["name"],
+                    "ports": len(desired_ports),
+                    "components": 1,
+                    "component": [component_state],
+                }
             ]
         }
     }

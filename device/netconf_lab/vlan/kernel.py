@@ -1,122 +1,111 @@
 import json
 import logging
 
-import sysrepo  # pyright: ignore[reportMissingImports] -- solo existe dentro de la imagen Netopeer2
-
 from ..interfaces.kernel import ALLOWED_NAME, PROTECTED, configured_interfaces, find_key, run
 
-BRIDGE_NAME = "netconf-vlan-br0"
+BRIDGE_NAME = "nc-vlan-br0"
+
+
+def _items(value):
+    """Convierte listas YANG (incluido libyang.keyed_list) en una lista normal."""
+    return list(value) if value else []
 
 
 def _module_data(conn, xpath):
     with conn.start_session("running") as sess:
         try:
             return sess.get_data(xpath)
-        except sysrepo.SysrepoNotFoundError:
+        except Exception:  # El módulo puede no estar instalado durante la migración.
             return {}
 
 
-def _config(entry):
-    return find_key(entry, "config", {}) or {}
-
-
-def _vlan_ids(value):
-    """Expande el formato OpenConfig de VLAN individual o intervalo."""
+def _vids(value):
+    """Expande la sintaxis IEEE de VIDs y rangos separados por comas."""
     if value is None:
         return set()
-    values = value if isinstance(value, list) else [value]
     result = set()
-    for item in values:
-        text = str(item)
-        if ".." in text:
-            first, last = text.split("..", 1)
+    for part in str(value).split(","):
+        first, separator, last = part.partition("-")
+        if separator:
             result.update(range(int(first), int(last) + 1))
         else:
-            result.add(int(item))
+            result.add(int(first))
     return result
 
 
-def configured_vlans(conn):
-    data = _module_data(conn, "/openconfig-network-instance:network-instances")
-    root = find_key(data, "network-instances", {})
-    instances = find_key(root, "network-instance", []) or []
-    vlans = {}
-    for instance in instances:
-        instance_name = instance.get("name") or _config(instance).get("name", "")
-        vlan_root = find_key(instance, "vlans", {}) or {}
-        for vlan in find_key(vlan_root, "vlan", []) or []:
-            config = _config(vlan)
-            vlan_id = config.get("vlan-id", vlan.get("vlan-id"))
-            if vlan_id is None:
-                continue
-            vlan_id = int(vlan_id)
-            if vlan_id in vlans:
-                raise ValueError(f"La VLAN {vlan_id} está definida en más de una network-instance")
-            vlans[vlan_id] = {
-                "id": vlan_id,
-                "name": config.get("name", ""),
-                "active": config.get("status", "ACTIVE") == "ACTIVE",
-                "network_instance": instance_name,
-            }
-    return vlans
-
-
-def configured_ports(conn):
-    data = _module_data(conn, "/openconfig-interfaces:interfaces")
-    root = find_key(data, "interfaces", {})
-    interfaces = find_key(root, "interface", []) or []
-    ports = {}
-    for interface in interfaces:
-        name = interface.get("name") or _config(interface).get("name", "")
-        ethernet = find_key(interface, "ethernet", {}) or {}
-        switched = find_key(ethernet, "switched-vlan", {}) or {}
-        config = _config(switched)
-        mode = config.get("interface-mode")
-        if mode:
-            ports[name] = {
-                "mode": str(mode).split(":")[-1],
-                "access_vlan": config.get("access-vlan"),
-                "native_vlan": config.get("native-vlan"),
-                "trunk_vlans": _vlan_ids(config.get("trunk-vlans", [])),
-            }
-    return ports
+def _bridge_configuration(conn):
+    data = _module_data(conn, "/ieee802-dot1q-bridge:bridges")
+    root = find_key(data, "bridges", {}) or {}
+    bridges = _items(find_key(root, "bridge", []))
+    if len(bridges) > 1:
+        raise ValueError("El laboratorio admite exactamente un bridge IEEE 802.1Q")
+    return bridges[0] if bridges else {}
 
 
 def desired_vlan_ports(conn):
-    managed = {
+    """Traduce bridge-port/PVID y port-map IEEE a reglas Linux bridge vlan.
+
+    IEEE identifica los puertos del port-map por ``port-ref`` numérico. El
+    laboratorio publica una asignación estable: los bridge ports se numeran
+    desde 1, ordenados lexicográficamente por nombre de interfaz.
+    """
+    bridge = _bridge_configuration(conn)
+    if not bridge:
+        return {}, {}
+    components = _items(bridge.get("component", []))
+    if len(components) != 1:
+        raise ValueError("El bridge IEEE debe contener exactamente un componente VLAN")
+    component = components[0]
+    bridge_name = bridge.get("name")
+    component_name = component.get("name")
+    interfaces = {
         entry.get("name"): entry
         for entry in configured_interfaces(conn)
         if entry.get("name") and entry.get("enabled", True)
     }
-    vlans = configured_vlans(conn)
-    ports = configured_ports(conn)
-    desired = {}
-    for name, port in ports.items():
-        if name in PROTECTED:
-            raise ValueError(f"La interfaz protegida {name} no puede ser un puerto VLAN")
-        if name not in managed:
-            raise ValueError(f"El puerto VLAN {name} no es una interfaz dummy gestionada")
-        if not ALLOWED_NAME.fullmatch(name):
-            raise ValueError(f"Nombre de puerto VLAN no permitido: {name}")
-        mode = port["mode"]
-        if mode == "ACCESS":
-            if port["access_vlan"] is None or port["native_vlan"] is not None or port["trunk_vlans"]:
-                raise ValueError(f"El puerto access {name} debe tener únicamente access-vlan")
-            members = {int(port["access_vlan"])}
-            native = int(port["access_vlan"])
-        elif mode == "TRUNK":
-            if port["access_vlan"] is not None:
-                raise ValueError(f"El trunk {name} no puede definir access-vlan")
-            native = int(port["native_vlan"]) if port["native_vlan"] is not None else None
-            members = set(port["trunk_vlans"]) or set(vlans)
-            if native is not None:
-                members.add(native)
-        else:
-            raise ValueError(f"Modo VLAN no admitido en {name}: {mode}")
-        unavailable = sorted(vlan for vlan in members if vlan not in vlans or not vlans[vlan]["active"])
-        if unavailable:
-            raise ValueError(f"El puerto {name} referencia VLANs inexistentes o suspendidas: {unavailable}")
-        desired[name] = {"members": members, "native": native}
+    bridge_ports = {}
+    for name, interface in interfaces.items():
+        port = find_key(interface, "bridge-port", {}) or {}
+        if port.get("bridge-name") == bridge_name and port.get("component-name") == component_name:
+            bridge_ports[name] = port
+    port_numbers = {number: name for number, name in enumerate(sorted(bridge_ports), start=1)}
+    desired = {
+        name: {"members": set(), "native": int(port.get("pvid", 1))}
+        for name, port in bridge_ports.items()
+    }
+    for name, port in bridge_ports.items():
+        if name in PROTECTED or not ALLOWED_NAME.fullmatch(name):
+            raise ValueError(f"El bridge port {name} no es una interfaz dummy gestionada")
+        if port.get("port-type") not in (None, "ieee802-dot1q-bridge:c-vlan-bridge-port"):
+            raise ValueError(f"Tipo de bridge port no admitido en {name}: {port.get('port-type')}")
+    registrations = find_key(component, "filtering-database", {}) or {}
+    vlans = {}
+    for entry in _items(registrations.get("vlan-registration-entry", [])):
+        if entry.get("entry-type") != "static":
+            raise ValueError("Solo se admiten vlan-registration-entry estáticas")
+        vids = _vids(entry.get("vids"))
+        if not vids or any(vid < 1 or vid > 4094 for vid in vids):
+            raise ValueError(f"VID IEEE no admitido: {entry.get('vids')}")
+        for port_map in _items(entry.get("port-map", [])):
+            name = port_numbers.get(int(port_map.get("port-ref", 0)))
+            details = port_map.get("static-vlan-registration-entries")
+            if name is None or details is None:
+                raise ValueError(f"port-ref IEEE inválido: {port_map.get('port-ref')}")
+            if details.get("registrar-admin-control") == "forbidden":
+                continue
+            transmitted = details.get("vlan-transmitted")
+            if transmitted not in ("tagged", "untagged"):
+                raise ValueError(f"vlan-transmitted inválido en {name}: {transmitted}")
+            for vid in vids:
+                if vid in vlans and vlans[vid] != entry.get("database-id"):
+                    raise ValueError(f"El VID {vid} aparece en varias filtering databases")
+                vlans[vid] = entry.get("database-id")
+                desired[name]["members"].add(vid)
+                if transmitted == "untagged" and desired[name]["native"] != vid:
+                    raise ValueError(f"El PVID de {name} debe coincidir con su VLAN sin etiqueta")
+    for name, port in desired.items():
+        if port["native"] not in port["members"]:
+            raise ValueError(f"El PVID {port['native']} de {name} no está registrado en el port-map")
     return vlans, desired
 
 
@@ -125,25 +114,11 @@ def validate_vlan_configuration(conn):
 
 
 def validate_vlan_changes(changes, conn):
-    """Rechaza referencias nuevas a VLAN inexistente antes del commit.
-
-    sysrepo-python no expone la sesión candidata al callback; por ello las
-    referencias modificadas se contrastan contra las VLAN ya confirmadas y la
-    validación integral se repite tras el commit durante la reconciliación.
-    """
-    vlans = configured_vlans(conn)
+    """Rechaza referencias a puertos protegidos en cambios IEEE directos."""
     for change in changes:
         xpath = str(getattr(change, "xpath", ""))
-        if not any(leaf in xpath for leaf in ("access-vlan", "native-vlan", "trunk-vlans")):
-            continue
-        value = getattr(change, "value", None)
-        if value is None:
-            continue
-        missing = _vlan_ids(value) - set(vlans)
-        if missing:
-            raise sysrepo.SysrepoValidationFailedError(
-                f"Referencia a VLAN inexistente: {sorted(missing)}"
-            )
+        if "bridge-port" in xpath and any(f"[name='{name}']" in xpath for name in PROTECTED):
+            raise ValueError("eth0 y lo no pueden ser bridge ports")
 
 
 def _bridge_ports():
