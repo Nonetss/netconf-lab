@@ -31,7 +31,7 @@ El dispositivo SHALL descubrir los archivos YANG ubicados en cada `device/yang/<
 
 ### Requirement: Reconciliación de interfaces virtuales
 
-El dispositivo SHALL reconciliar las interfaces configuradas mediante `ietf-interfaces` con enlaces Linux `dummy` dentro del contenedor. Para nombres válidos que no sean interfaces protegidas, SHALL crear el enlace si no existe y reflejar los valores configurados de estado administrativo, MTU y direcciones IPv4. SHALL no modificar `eth0` ni `lo`.
+El dispositivo SHALL reconciliar las interfaces configuradas mediante `ietf-interfaces` con enlaces Linux `dummy` dentro del contenedor. Para nombres válidos que no sean interfaces protegidas, SHALL crear el enlace si no existe y reflejar los valores configurados de estado administrativo, MTU y direcciones IPv4. SHALL no modificar `eth0` ni `lo`. Cuando una interfaz tenga `ieee802-dot1q-bridge:bridge-port`, SHALL reconciliarla como puerto de conmutación en el plano de datos VLAN y conservar su configuración IPv4 sin cambios.
 
 #### Scenario: Creación de una interfaz dummy activada
 
@@ -42,6 +42,11 @@ El dispositivo SHALL reconciliar las interfaces configuradas mediante `ietf-inte
 
 - **WHEN** la configuración incluye `eth0` o `lo`
 - **THEN** el reconciliador no crea, elimina ni altera esos enlaces Linux
+
+#### Scenario: Interfaz configurada como puerto VLAN
+
+- **WHEN** un cliente configura una interfaz dummy existente como `bridge-port` IEEE con PVID y port-map
+- **THEN** el reconciliador conserva el enlace dummy y aplica su pertenencia VLAN efectiva
 
 ### Requirement: Estado operacional de interfaces
 
