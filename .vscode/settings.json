@@ -50,6 +50,10 @@
     "./device/init/interfaz/interfaces.schema.json": [
       "device/init/interfaz/interfaces.yaml",
       "device/init/interfaz/interfaces.example.yaml"
+    ],
+    "./device/init/vlan/vlan.schema.json": [
+      "device/init/vlan/vlan.yaml",
+      "device/init/vlan/vlan.example.yaml"
     ]
   }
 }

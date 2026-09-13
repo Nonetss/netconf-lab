@@ -337,9 +337,9 @@ def primary_module_names(ctx):
     """Modulos con nodos config=true propios en la raiz, en orden de aparicion."""
     names = []
     for module in ctx.modules.values():
-        if any(getattr(c, "i_config", True) for c in getattr(module, "i_children", [])):
-            if module.arg not in names:
-                names.append(module.arg)
+        has_config = any(getattr(c, "i_config", True) for c in getattr(module, "i_children", []))
+        if has_config and module.arg not in names:
+            names.append(module.arg)
     return names
 
 
@@ -370,7 +370,8 @@ def generate_feature(feature_dir):
     # Solo se sobreescriben los .example.yaml/.schema.json generados -- el
     # <base_name>.yaml real (editado a mano) nunca se toca aqui.
     (out_dir / f"{base_name}.example.yaml").write_text("\n".join(yaml_lines) + "\n", encoding="utf-8")
-    (out_dir / schema_filename).write_text(json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    schema_text = json.dumps(schema, indent=2, ensure_ascii=False) + "\n"
+    (out_dir / schema_filename).write_text(schema_text, encoding="utf-8")
 
     print(f"  {(out_dir / f'{base_name}.example.yaml').relative_to(REPO_ROOT)}")
     print(f"  {(out_dir / schema_filename).relative_to(REPO_ROOT)}")

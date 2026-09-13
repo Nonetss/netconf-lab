@@ -1,6 +1,6 @@
 # Sandbox NETCONF con Docker Compose
 
-Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip`, `ietf-system`, `openconfig-platform` (RFC de IETF/IANA y OpenConfig, nada propio).
+Laboratorio autocontenido que simula un dispositivo de red, no sólo un socket que responde. Usa **Netopeer2** como servidor NETCONF, **Sysrepo** como datastore YANG y solo modelos **estándar**: `ietf-interfaces` + `ietf-ip`, `ietf-system`, `openconfig-platform` e IEEE 802.1Q (RFC de IETF/IANA, OpenConfig e IEEE; nada propio).
 
 > `device/entrypoint.py` instala y siembra **cualquier cosa** que metas en `device/yang/<feature>/` + `device/init/<feature>/<módulo>.yaml` de forma genérica, sin tocar código — ver [Añadir modelos YANG](#añadir-modelos-yang). Los callbacks Python para estado operacional (`config false`) o RPCs siguen siendo manuales: hoy hay estado para interfaces, sistema, plataforma y VLAN OpenConfig, pero no hay RPCs implementadas (ver [Qué está de verdad conectado](#qué-está-de-verdad-conectado)).
 
@@ -20,7 +20,7 @@ Un target NETCONF real (config + estado sobre datastores de verdad) contra el qu
 - Interfaces configurables con `ietf-interfaces`/`ietf-ip` (`device/init/interfaz/interfaces.yaml` trae una interfaz `eth0` de ejemplo — el nombre y los datos son tuyos, edítalos).
 - Interfaces Linux `dummy` reales dentro del namespace del contenedor; `enabled`, MTU y direcciones IPv4 se reconcilian desde la configuración YANG.
 - Estado operacional de interfaz: `oper-status`, MAC, índice, velocidad y contadores de tráfico.
-- Conmutación L2 con `openconfig-network-instance`/`openconfig-vlan`: VLANs 802.1Q, puertos access y trunks sobre el bridge privado `netconf-vlan-br0` con `vlan_filtering=1`.
+- Conmutación L2 con `ieee802-dot1q-bridge`: VLANs 802.1Q, PVID por `bridge-port` y membresías/etiquetado por `filtering-database/vlan-registration-entry/port-map`, sobre el bridge privado `nc-vlan-br0` con `vlan_filtering=1`.
 - Config de sistema (`ietf-system`): hostname, ubicación, NTP, DNS, RADIUS y usuarios/claves SSH sembrados; su estado operacional incluye plataforma, reloj actual y hora de arranque del contenedor.
 - Inventario de chasis (`openconfig-platform`): chasis, control plane, ventilador y fuente sembrados; su estado operacional completa cada componente con tipo, descripción e identificadores virtuales.
 - Persistencia del datastore en un volumen Docker.
@@ -89,6 +89,10 @@ docker compose exec device sysrepocfg -X -d operational -m ietf-system -f xml
 # Config y estado operacional del inventario de chasis
 docker compose exec device sysrepocfg -X -d running -m openconfig-platform -f xml
 docker compose exec device sysrepocfg -X -d operational -m openconfig-platform -f xml
+
+# Configuración IEEE 802.1Q y sus membresías operacionales
+docker compose exec device sysrepocfg -X -d running -m ieee802-dot1q-bridge -f xml
+docker compose exec device sysrepocfg -X -d operational -m ieee802-dot1q-bridge -f xml
 ```
 
 `scripts/smoke-test.sh` automatiza estos mismos pasos.
@@ -131,7 +135,7 @@ docker compose exec device ip -details address
 
 # VLANs efectivas y bridge privado del laboratorio
 docker compose exec device bridge vlan show
-docker compose exec device ip -d link show netconf-vlan-br0
+docker compose exec device ip -d link show nc-vlan-br0
 
 # Logs del servidor y plugin
 docker compose logs -f device
@@ -210,7 +214,7 @@ En la práctica: crea la carpeta, copia el `.example.yaml` a `<módulo>.yaml`, r
 La instalación + seed de config (paso 5 de arriba) es genérica y cubre **todo** lo que haya en `device/yang/`/`device/init/`. Lo que **no** es genérico — porque no hay forma de que lo sea sin más contexto sobre qué quieres simular — son los callbacks Python en `device/netconf_lab/` para nodos `config false` y RPCs:
 
 - `ietf-interfaces` reconcilia interfaces Linux `dummy` reales y sirve `oper-status`, MAC y contadores.
-- `openconfig-interfaces` y `openconfig-network-instance` describen VLANs access/trunk; el plugin las reconcilia contra un único bridge Linux con filtrado 802.1Q y publica las membresías efectivas.
+- `ieee802-dot1q-bridge` describe el bridge, sus componentes, `bridge-port`/PVID y las VLAN Registration Entries; el plugin las reconcilia contra un único bridge Linux con filtrado 802.1Q y publica sus puertos y membresías efectivas.
 - `ietf-system` sirve `system-state/platform` desde el contenedor, y las fechas actual y de arranque.
 - `openconfig-platform` genera el estado de los componentes configurados, incluyendo tipo y metadatos virtuales deterministas.
 
@@ -227,11 +231,11 @@ Un par de detalles del seed real de este repo si tocas `device/init/sistema/sist
 ./scripts/smoke-test.sh
 ```
 
-La prueba levanta el laboratorio y verifica lectura de la config, creación/activación de una interfaz, bridge VLAN filtering, membresías access/trunk, estado operacional y rechazo de una referencia a VLAN inexistente.
+La prueba levanta el laboratorio y verifica lectura de la config, creación/activación de una interfaz, bridge VLAN filtering, PVID, port-map IEEE, estado operacional y rechazo de un PVID reservado.
 
 ## Límites de VLAN
 
-El bridge solo incorpora interfaces `dummy` configuradas también en `ietf-interfaces`; nunca toca `eth0`, `lo` ni el host. No hay SVI, enrutamiento inter-VLAN, STP/LACP, ACL, QoS, DHCP ni telemetría de hardware. Un trunk sin `trunk-vlans` permite todas las VLANs activas configuradas.
+El bridge solo incorpora interfaces `dummy` configuradas también en `ietf-interfaces`; nunca toca `eth0`, `lo` ni el host. Los `port-ref` IEEE se asignan de forma estable desde 1, ordenando lexicográficamente los bridge ports. No hay SVI, enrutamiento inter-VLAN, STP/LACP, ACL, QoS, DHCP ni telemetría de hardware.
 
 ## Base técnica
 
