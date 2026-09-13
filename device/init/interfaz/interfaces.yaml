@@ -31,7 +31,7 @@
           create-global-addresses: true # boolean
     - name: "dummy0" # string
       description: "Dummy interface 0" # string
-      type: "iana-if-type:propVirtual" # identityref base interface-type, mandatory
+      type: "iana-if-type:ethernetCsmacd" # identityref base interface-type, mandatory
       enabled: true # boolean
       link-up-down-trap-enable: "enabled" # enumeration, if-feature if-mib, enum: enabled|disabled
       "ietf-ip:ipv4":
@@ -47,9 +47,27 @@
         mtu: 1400 # uint32
         autoconf:
           create-global-addresses: false # boolean
+    - name: "dummy2" # string
+      description: "Dummy interface 2" # string
+      type: "iana-if-type:ethernetCsmacd" # identityref base interface-type, mandatory
+      enabled: true # boolean
+      link-up-down-trap-enable: "enabled" # enumeration, if-feature if-mib, enum: enabled|disabled
+      "ietf-ip:ipv4":
+        enabled: true # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint16
+        address:
+          - ip: "10.0.0.185" # inet:ipv4-address-no-zone
+            prefix-length: 24 # uint8
+      "ietf-ip:ipv6":
+        enabled: false # boolean
+        forwarding: false # boolean
+        mtu: 1500 # uint32
+        autoconf:
+          create-global-addresses: false # boolean
     - name: "dummy1" # string
       description: "Dummy interface 1 (IPv6 only)" # string
-      type: "iana-if-type:propVirtual" # identityref base interface-type, mandatory
+      type: "iana-if-type:ethernetCsmacd" # identityref base interface-type, mandatory
       enabled: true # boolean
       "ietf-ip:ipv4":
         enabled: false # boolean

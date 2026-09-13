@@ -1,52 +1,53 @@
-# Topología L2 mínima: dummy0 es access en VLAN 100 y dummy1 es trunk
-# (VLAN nativa 100 y VLAN 200 etiquetada). Las interfaces Linux se crean
-# mediante el árbol ietf-interfaces de esta semilla.
+# yaml-language-server: $schema=./vlan.schema.json
+# Topología IEEE 802.1Q: dummy0 es access (VID 100) y dummy1 es trunk
+# (PVID 100 sin etiqueta y VID 200 etiquetado). Los port-ref se asignan
+# por nombre de interfaz ordenado: dummy0=1, dummy1=2.
 "ietf-interfaces:interfaces":
   interface:
-    - name: "dummy0"
-      type: "iana-if-type:ethernetCsmacd"
+    - name: dummy0
+      type: iana-if-type:ethernetCsmacd
       enabled: true
-    - name: "dummy1"
-      type: "iana-if-type:ethernetCsmacd"
+      "ieee802-dot1q-bridge:bridge-port":
+        bridge-name: lab-bridge
+        component-name: c-vlan
+        port-type: ieee802-dot1q-bridge:c-vlan-bridge-port
+        pvid: 100
+    - name: dummy1
+      type: iana-if-type:ethernetCsmacd
       enabled: true
-"openconfig-interfaces:interfaces":
-  interface:
-    - name: "dummy0"
-      config:
-        name: "dummy0"
-        type: "iana-if-type:ethernetCsmacd"
-        enabled: true
-      "openconfig-if-ethernet:ethernet":
-        "openconfig-vlan:switched-vlan":
-          config:
-            interface-mode: "ACCESS"
-            access-vlan: 100
-    - name: "dummy1"
-      config:
-        name: "dummy1"
-        type: "iana-if-type:ethernetCsmacd"
-        enabled: true
-      "openconfig-if-ethernet:ethernet":
-        "openconfig-vlan:switched-vlan":
-          config:
-            interface-mode: "TRUNK"
-            native-vlan: 100
-            trunk-vlans: [200]
-"openconfig-network-instance:network-instances":
-  network-instance:
-    - name: "DEFAULT"
-      config:
-        name: "DEFAULT"
-        type: "openconfig-network-instance-types:DEFAULT_INSTANCE"
-      vlans:
-        vlan:
-          - vlan-id: 100
-            config:
-              vlan-id: 100
-              name: "users"
-              status: "ACTIVE"
-          - vlan-id: 200
-            config:
-              vlan-id: 200
-              name: "servers"
-              status: "ACTIVE"
+      "ieee802-dot1q-bridge:bridge-port":
+        bridge-name: lab-bridge
+        component-name: c-vlan
+        port-type: ieee802-dot1q-bridge:c-vlan-bridge-port
+        pvid: 100
+"ieee802-dot1q-bridge:bridges":
+  bridge:
+    - name: lab-bridge
+      address: 02-00-00-00-00-01
+      bridge-type: ieee802-dot1q-bridge:customer-vlan-bridge
+      component:
+        - name: c-vlan
+          id: 1
+          type: ieee802-dot1q-bridge:c-vlan-component
+          filtering-database:
+            vlan-registration-entry:
+              - database-id: 1
+                vids: "100"
+                entry-type: static
+                port-map:
+                  - port-ref: 1
+                    static-vlan-registration-entries:
+                      registrar-admin-control: fixed-new-ignored
+                      vlan-transmitted: untagged
+                  - port-ref: 2
+                    static-vlan-registration-entries:
+                      registrar-admin-control: fixed-new-ignored
+                      vlan-transmitted: untagged
+              - database-id: 1
+                vids: "200"
+                entry-type: static
+                port-map:
+                  - port-ref: 2
+                    static-vlan-registration-entries:
+                      registrar-admin-control: fixed-new-ignored
+                      vlan-transmitted: tagged
