@@ -1,0 +1,52 @@
+# Topología L2 mínima: dummy0 es access en VLAN 100 y dummy1 es trunk
+# (VLAN nativa 100 y VLAN 200 etiquetada). Las interfaces Linux se crean
+# mediante el árbol ietf-interfaces de esta semilla.
+"ietf-interfaces:interfaces":
+  interface:
+    - name: "dummy0"
+      type: "iana-if-type:ethernetCsmacd"
+      enabled: true
+    - name: "dummy1"
+      type: "iana-if-type:ethernetCsmacd"
+      enabled: true
+"openconfig-interfaces:interfaces":
+  interface:
+    - name: "dummy0"
+      config:
+        name: "dummy0"
+        type: "iana-if-type:ethernetCsmacd"
+        enabled: true
+      "openconfig-if-ethernet:ethernet":
+        "openconfig-vlan:switched-vlan":
+          config:
+            interface-mode: "ACCESS"
+            access-vlan: 100
+    - name: "dummy1"
+      config:
+        name: "dummy1"
+        type: "iana-if-type:ethernetCsmacd"
+        enabled: true
+      "openconfig-if-ethernet:ethernet":
+        "openconfig-vlan:switched-vlan":
+          config:
+            interface-mode: "TRUNK"
+            native-vlan: 100
+            trunk-vlans: [200]
+"openconfig-network-instance:network-instances":
+  network-instance:
+    - name: "DEFAULT"
+      config:
+        name: "DEFAULT"
+        type: "openconfig-network-instance-types:DEFAULT_INSTANCE"
+      vlans:
+        vlan:
+          - vlan-id: 100
+            config:
+              vlan-id: 100
+              name: "users"
+              status: "ACTIVE"
+          - vlan-id: 200
+            config:
+              vlan-id: 200
+              name: "servers"
+              status: "ACTIVE"
